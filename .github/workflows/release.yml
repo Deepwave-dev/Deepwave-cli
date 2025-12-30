@@ -1,0 +1,247 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*" # Triggers on tags like v1.0.0, v1.0.1, etc.
+
+jobs:
+  build-macos-x86_64:
+    runs-on: macos-15-intel # macOS 15 Intel runners for x86_64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify architecture
+        run: |
+          ARCH=$(uname -m)
+          echo "Detected architecture: $ARCH"
+          if [ "$ARCH" != "x86_64" ]; then
+            echo "⚠️ Warning: Expected x86_64 but got $ARCH"
+          fi
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r cli/requirements.txt
+
+      - name: Build binary
+        run: |
+          pyinstaller cli/deepwave.spec --clean --noconfirm
+
+      - name: Rename and verify binary
+        run: |
+          cd dist
+          if [ -f "deepwave" ]; then
+            mv deepwave deepwave-macos-x86_64
+            chmod +x deepwave-macos-x86_64
+            file deepwave-macos-x86_64
+          else
+            echo "❌ Binary not found!"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepwave-macos-x86_64
+          path: dist/deepwave-macos-x86_64
+          retention-days: 7
+
+  build-macos-arm64:
+    runs-on: macos-14 # macOS 14 runners are typically arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify architecture
+        run: |
+          ARCH=$(uname -m)
+          echo "Detected architecture: $ARCH"
+          if [ "$ARCH" != "arm64" ]; then
+            echo "⚠️ Warning: Expected arm64 but got $ARCH"
+          fi
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r cli/requirements.txt
+
+      - name: Build binary
+        run: |
+          pyinstaller cli/deepwave.spec --clean --noconfirm
+
+      - name: Rename and verify binary
+        run: |
+          cd dist
+          if [ -f "deepwave" ]; then
+            mv deepwave deepwave-macos-arm64
+            chmod +x deepwave-macos-arm64
+            file deepwave-macos-arm64
+          else
+            echo "❌ Binary not found!"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepwave-macos-arm64
+          path: dist/deepwave-macos-arm64
+          retention-days: 7
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r cli/requirements.txt
+
+      - name: Build binary
+        run: |
+          pyinstaller cli/deepwave.spec --clean --noconfirm
+
+      - name: Rename and verify binary
+        run: |
+          cd dist
+          if [ -f "deepwave" ]; then
+            mv deepwave deepwave-linux-x86_64
+            chmod +x deepwave-linux-x86_64
+            file deepwave-linux-x86_64
+          else
+            echo "❌ Binary not found!"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepwave-linux-x86_64
+          path: dist/deepwave-linux-x86_64
+          retention-days: 7
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r cli/requirements.txt
+
+      - name: Build binary
+        run: |
+          pyinstaller cli/deepwave.spec --clean --noconfirm
+
+      - name: Rename binary
+        shell: cmd
+        run: |
+          cd dist
+          if exist deepwave.exe (
+            ren deepwave.exe deepwave-windows-x86_64.exe
+          ) else (
+            echo Binary not found!
+            exit /b 1
+          )
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepwave-windows-x86_64.exe
+          path: dist/deepwave-windows-x86_64.exe
+          retention-days: 7
+
+  release:
+    needs: [build-macos-x86_64, build-macos-arm64, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required for creating releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: deepwave-*
+          merge-multiple: false
+
+      - name: List artifacts
+        run: |
+          echo "📦 Artifacts to release:"
+          find dist -type f -name "deepwave-*" | sort
+
+      - name: Extract version from tag
+        id: tag_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}  # Remove 'v' prefix if present
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/deepwave-macos-x86_64
+            dist/deepwave-macos-arm64
+            dist/deepwave-linux-x86_64
+            dist/deepwave-windows-x86_64.exe
+          name: Release ${{ steps.tag_version.outputs.tag }}
+          body: |
+            ## Deepwave CLI ${{ steps.tag_version.outputs.version }}
+
+            ### Installation
+
+            Install with one command:
+
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/Deepwave-dev/Deepwave-cli/main/install.sh | bash
+            ```
+
+            ### Downloads
+
+            - **macOS (Intel)**: [deepwave-macos-x86_64](https://github.com/Deepwave-dev/Deepwave-cli/releases/download/${{ steps.tag_version.outputs.tag }}/deepwave-macos-x86_64)
+            - **macOS (Apple Silicon)**: [deepwave-macos-arm64](https://github.com/Deepwave-dev/Deepwave-cli/releases/download/${{ steps.tag_version.outputs.tag }}/deepwave-macos-arm64)
+            - **Linux**: [deepwave-linux-x86_64](https://github.com/Deepwave-dev/Deepwave-cli/releases/download/${{ steps.tag_version.outputs.tag }}/deepwave-linux-x86_64)
+            - **Windows**: [deepwave-windows-x86_64.exe](https://github.com/Deepwave-dev/Deepwave-cli/releases/download/${{ steps.tag_version.outputs.tag }}/deepwave-windows-x86_64.exe)
+
+            ### What's New
+
+            See [CHANGELOG.md](https://github.com/Deepwave-dev/Deepwave-cli/blob/main/CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
