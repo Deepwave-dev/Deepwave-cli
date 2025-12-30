@@ -200,18 +200,31 @@ jobs:
 
       - name: List artifacts
         run: |
-          echo "📦 Artifacts to release:"
+          echo "📦 Artifacts structure:"
           find dist -type f -name "deepwave-*" | sort
+          echo ""
+          echo "📦 Artifacts directories:"
+          find dist -type d | sort
 
       - name: Flatten artifact structure
         run: |
-          # Artifacts are downloaded to subdirectories, flatten them to dist/
+          # Artifacts are downloaded to subdirectories like dist/deepwave-macos-arm64/deepwave-macos-arm64
+          # We need to move them to dist/ directly
           mkdir -p dist_flat
-          find dist -type f -name "deepwave-*" -exec cp {} dist_flat/ \;
-          mv dist_flat/* dist/ 2>/dev/null || true
-          rmdir dist_flat 2>/dev/null || true
+          
+          # Find all binary files and copy them to dist_flat with correct names
+          for file in $(find dist -type f -name "deepwave-*"); do
+            filename=$(basename "$file")
+            echo "Copying $file to dist_flat/$filename"
+            cp "$file" "dist_flat/$filename"
+          done
+          
+          # Replace dist with flattened version
+          rm -rf dist
+          mv dist_flat dist
+          
           echo "📦 Files ready for release:"
-          ls -lh dist/deepwave-* || find dist -name "deepwave-*" -type f
+          ls -lh dist/
 
       - name: Extract version from tag
         id: tag_version
