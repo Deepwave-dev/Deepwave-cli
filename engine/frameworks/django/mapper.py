@@ -8,6 +8,7 @@ from engine.graph.call_graph import CallGraphResult
 from engine.binder.binder_treesitter import BinderTreeSitter
 from engine.parser.query_engine import QueryEngine
 
+
 class DjangoDomainMapper(DomainMapper):
     """Maps GenericNodes from CoreGraph to Django-specific domain models."""
 
@@ -26,18 +27,17 @@ class DjangoDomainMapper(DomainMapper):
         self.call_graph_result = call_graph_result
         self.binder = binder
         self.query_engine = query_engine
-        
+
         self.nodes: List[GraphNode] = []
         self.edges: List[GraphEdge] = []
 
     def map(self) -> Tuple[List[GraphNode], List[GraphEdge]]:
         """Map filtered GenericNodes to domain models."""
         logger.info("Running Django Domain Mapper...")
-        
+
         # TODO: Implement mapping logic
         # 1. Map Django Apps -> ApplicationNode
         # 2. Map URLConfs -> RouterNode
         # 3. Map Views -> EndpointNode
-        
-        return self.nodes, self.edges
 
+        return self.nodes, self.edges
