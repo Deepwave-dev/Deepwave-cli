@@ -209,10 +209,15 @@ main() {
         echo "Run: deepwave login"
         
         # Check if in PATH
-        if ! command -v "${BINARY_NAME}" &> /dev/null; then
+        if command -v "${BINARY_NAME}" &> /dev/null; then
+            echo "Run: deepwave login"
+        else
             echo ""
-            echo "Note: Add ${INSTALL_DIR} to your PATH to use 'deepwave' command"
-            echo "Or run: ${INSTALL_DIR}/${BINARY_NAME} login"
+            echo "To use 'deepwave' command:"
+            echo "  1. Restart your terminal, OR"
+            echo "  2. Run: source ~/.zshrc (or ~/.bashrc)"
+            echo ""
+            echo "Or use full path: ${INSTALL_DIR}/${BINARY_NAME} login"
         fi
     else
         echo -e "${RED}❌ Installation failed${NC}"
