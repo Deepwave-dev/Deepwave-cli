@@ -47,7 +47,7 @@ def get_git_info(repo_path: Path) -> tuple[str, str, str]:
 
 @click.command()
 @click.argument("repo_path", type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path))
-@click.option("--project-id", required=True, help="Project ID/hash")
+@click.argument("project_id", required=True)
 @click.option("--repo-url", help="Repository URL (auto-detected from git if not provided)")
 @click.option("--branch", help="Branch name (auto-detected from git if not provided)")
 @click.option("--commit-sha", help="Commit SHA (auto-detected from git if not provided)")

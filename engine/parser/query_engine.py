@@ -1,11 +1,11 @@
 """Tree-sitter query engine for pattern matching"""
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from tree_sitter import Tree, Node as TSNode, Language, Query, QueryCursor
 from loguru import logger
-
 from engine.parser.import_analyzer import ImportAnalyzer
 
 
@@ -107,9 +107,15 @@ class QueryEngine:
 
     def _get_queries_directory(self) -> Path:
         """Get the path to the queries directory"""
-        # Assume queries are in services/parser/queries/
-        current_file = Path(__file__)
-        return current_file.parent / "queries"
+        # Handle PyInstaller's temp directory
+        if getattr(sys, "frozen", False):
+            # Running as compiled binary (PyInstaller)
+            base_path = Path(sys._MEIPASS)
+        else:
+            # Running as script
+            base_path = Path(__file__).parent
+
+        return base_path / "queries"
 
     def execute_query(self, tree: Tree, query_name: str, validate_imports: bool = True) -> List[QueryResult]:
         """

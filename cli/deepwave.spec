@@ -27,7 +27,9 @@ a = Analysis(
         str(project_root / 'cli'),
     ],
     binaries=[],
-    datas=[],
+    datas=[
+        (str(project_root / 'engine' / 'parser' / 'queries'), 'engine/parser/queries'),
+    ],
     hiddenimports=[
         'click',
         'click.core',
