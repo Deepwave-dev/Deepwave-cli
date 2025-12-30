@@ -3,11 +3,11 @@ from typing import Dict, List, Optional, Tuple
 from tree_sitter import Tree, Node as TSNode
 
 from loguru import logger
-from deepwave_engine.models import ApplicationNode, RouterNode, ServiceClassNode, BaseNode
-from deepwave_engine.models import GenericNode
-from deepwave_engine.parser import TreeSitterParser, QueryEngine
-from deepwave_engine.parser.parse_cache import ParseCache
-from deepwave_engine.ignore import discover_python_files
+from engine.models import ApplicationNode, RouterNode, ServiceClassNode, BaseNode
+from engine.models import GenericNode
+from engine.parser import TreeSitterParser, QueryEngine
+from engine.parser.parse_cache import ParseCache
+from engine.ignore import discover_python_files
 from .import_graph_treesitter import ImportGraphTreeSitter
 
 

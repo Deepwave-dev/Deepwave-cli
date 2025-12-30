@@ -3,18 +3,18 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 from loguru import logger
 
-from deepwave_engine.models import (
+from engine.models import (
     CoreGraph,
     GenericNode,
     GenericEdge,
     GenericNodeType,
     GenericEdgeType,
 )
-from deepwave_engine.models import ProjectMetadata
-from deepwave_engine.parser import TreeSitterParser, QueryEngine
-from deepwave_engine.parser.query_engine import QueryResult
-from deepwave_engine.parser.parse_cache import ParseCache
-from deepwave_engine.ignore import discover_python_files
+from engine.models import ProjectMetadata
+from engine.parser import TreeSitterParser, QueryEngine
+from engine.parser.query_engine import QueryResult
+from engine.parser.parse_cache import ParseCache
+from engine.ignore import discover_python_files
 
 
 class CoreGraphBuilder:

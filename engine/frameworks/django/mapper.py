@@ -1,12 +1,12 @@
 from typing import Tuple, List, Optional
 from loguru import logger
-from deepwave_engine.models import GraphNode, GraphEdge
-from deepwave_engine.models import CoreGraph
-from deepwave_engine.frameworks.base import DomainMapper
-from deepwave_engine.frameworks.django.filter import DjangoFilter
-from deepwave_engine.graph.call_graph import CallGraphResult
-from deepwave_engine.binder.binder_treesitter import BinderTreeSitter
-from deepwave_engine.parser.query_engine import QueryEngine
+from engine.models import GraphNode, GraphEdge
+from engine.models import CoreGraph
+from engine.frameworks.base import DomainMapper
+from engine.frameworks.django.filter import DjangoFilter
+from engine.graph.call_graph import CallGraphResult
+from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.parser.query_engine import QueryEngine
 
 class DjangoDomainMapper(DomainMapper):
     """Maps GenericNodes from CoreGraph to Django-specific domain models."""

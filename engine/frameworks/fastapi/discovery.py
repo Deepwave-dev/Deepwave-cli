@@ -8,14 +8,14 @@ from pathlib import Path
 from typing import List, Optional
 from tree_sitter import Node as TSNode
 
-from deepwave_engine.models import GraphEdge, EdgeRelation
-from deepwave_engine.models import ApplicationNode, RouterNode
-from deepwave_engine.binder.expression_resolver import ExpressionResolver
-from deepwave_engine.binder.binder_treesitter import BinderTreeSitter
-from deepwave_engine.parser.query_engine import QueryEngine
-from deepwave_engine.parser.parse_cache import ParseCache
-from deepwave_engine.frameworks.fastapi.filter import FastAPIFilter
-from deepwave_engine.ignore import discover_python_files
+from engine.models import GraphEdge, EdgeRelation
+from engine.models import ApplicationNode, RouterNode
+from engine.binder.expression_resolver import ExpressionResolver
+from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.parser.query_engine import QueryEngine
+from engine.parser.parse_cache import ParseCache
+from engine.frameworks.fastapi.filter import FastAPIFilter
+from engine.ignore import discover_python_files
 
 
 class IncludesEdgeDiscoverer:

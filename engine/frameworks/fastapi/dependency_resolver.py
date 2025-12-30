@@ -10,11 +10,11 @@ from typing import List, Set, Optional, Tuple, Dict
 from loguru import logger
 from tree_sitter import Node as TSNode
 
-from deepwave_engine.models import FunctionNode
-from deepwave_engine.binder.binder_treesitter import BinderTreeSitter
-from deepwave_engine.binder.expression_resolver import ExpressionResolver
-from deepwave_engine.parser import TreeSitterParser, QueryEngine
-from deepwave_engine.ignore import file_to_module_path
+from engine.models import FunctionNode
+from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.binder.expression_resolver import ExpressionResolver
+from engine.parser import TreeSitterParser, QueryEngine
+from engine.ignore import file_to_module_path
 
 
 class DependencyResolver:
@@ -178,7 +178,7 @@ class DependencyResolver:
                     if hasattr(class_node, "start_line") and hasattr(class_node, "end_line"):
                         if class_node.start_line <= func_line <= class_node.end_line:
                             # Create a FunctionNode for __init__
-                            from deepwave_engine.ignore import file_to_module_path
+                            from engine.ignore import file_to_module_path
 
                             module_name = file_to_module_path(file_path, self.binder.project_path)
                             return FunctionNode.from_tree_sitter(

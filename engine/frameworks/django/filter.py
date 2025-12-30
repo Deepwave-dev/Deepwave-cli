@@ -1,7 +1,7 @@
 from pathlib import Path
 from loguru import logger
-from deepwave_engine.models import CoreGraph
-from deepwave_engine.frameworks.base import FrameworkFilter
+from engine.models import CoreGraph
+from engine.frameworks.base import FrameworkFilter
 
 class DjangoFilter(FrameworkFilter):
     """Identifies Django-specific patterns in a CoreGraph."""

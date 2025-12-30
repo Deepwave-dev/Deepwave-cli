@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 from tree_sitter import Node as TSNode
 
-from deepwave_engine.models import BaseNode, ApplicationNode, RouterNode, ServiceClassNode
+from engine.models import BaseNode, ApplicationNode, RouterNode, ServiceClassNode
 from .import_graph_treesitter import ImportGraphTreeSitter
 from .symbol_index_treesitter import SymbolIndexTreeSitter
 

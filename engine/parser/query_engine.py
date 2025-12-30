@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Any
 from tree_sitter import Tree, Node as TSNode, Language, Query, QueryCursor
 from loguru import logger
 
-from deepwave_engine.parser.import_analyzer import ImportAnalyzer
+from engine.parser.import_analyzer import ImportAnalyzer
 
 
 @dataclass

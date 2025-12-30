@@ -3,8 +3,8 @@ from typing import List, Dict, Optional, Tuple
 from loguru import logger
 import re
 
-from deepwave_engine.models import CoreGraph, GenericNode, GenericEdge, GenericNodeType, GenericEdgeType
-from deepwave_engine.models import (
+from engine.models import CoreGraph, GenericNode, GenericEdge, GenericNodeType, GenericEdgeType
+from engine.models import (
     ApplicationNode,
     RouterNode,
     EndpointNode,
@@ -13,15 +13,15 @@ from deepwave_engine.models import (
     FunctionNode,
     EntryPointNode,
 )
-from deepwave_engine.models import GraphNode, GraphEdge, EdgeRelation
-from deepwave_engine.frameworks.fastapi.filter import FastAPIFilter
-from deepwave_engine.graph.call_graph import CallGraphResult
-from deepwave_engine.binder.binder_treesitter import BinderTreeSitter
-from deepwave_engine.parser.query_engine import QueryEngine
-from deepwave_engine.parser.parse_cache import ParseCache
-from deepwave_engine.frameworks.fastapi.discovery import IncludesEdgeDiscoverer
-from deepwave_engine.frameworks.fastapi.dependency_resolver import DependencyResolver
-from deepwave_engine.frameworks.base import DomainMapper
+from engine.models import GraphNode, GraphEdge, EdgeRelation
+from engine.frameworks.fastapi.filter import FastAPIFilter
+from engine.graph.call_graph import CallGraphResult
+from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.parser.query_engine import QueryEngine
+from engine.parser.parse_cache import ParseCache
+from engine.frameworks.fastapi.discovery import IncludesEdgeDiscoverer
+from engine.frameworks.fastapi.dependency_resolver import DependencyResolver
+from engine.frameworks.base import DomainMapper
 from tree_sitter import Node as TSNode
 
 
@@ -200,7 +200,7 @@ class FastAPIDomainMapper(DomainMapper):
 
     def _map_endpoints(self) -> None:
         """Map GenericNode endpoints to EndpointNode"""
-        from deepwave_engine.models import EnumMethod
+        from engine.models import EnumMethod
 
         for func_node, decorator_node in self.filter.endpoints:
             # Extract HTTP method from decorator name (e.g., "router.get" -> "GET")
@@ -656,7 +656,7 @@ class FastAPIDomainMapper(DomainMapper):
             logger.warning("Binder or QueryEngine not available - skipping comprehensive calls edges")
             return
 
-        from deepwave_engine.parser import TreeSitterParser
+        from engine.parser import TreeSitterParser
 
         parser = TreeSitterParser("python")
 

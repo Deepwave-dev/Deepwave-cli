@@ -1,9 +1,9 @@
 from collections import defaultdict
 from typing import Dict, List
 
-from deepwave_engine.models import GraphEdge, GraphNode, ServiceGraph
-from deepwave_engine.models import FileDetail
-from deepwave_engine.models import CodebaseStats, KeyModule
+from engine.models import GraphEdge, GraphNode, ServiceGraph
+from engine.models import FileDetail
+from engine.models import CodebaseStats, KeyModule
 
 
 class StatsCalculator:

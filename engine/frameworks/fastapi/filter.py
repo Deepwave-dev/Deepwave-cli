@@ -10,11 +10,11 @@ from typing import Dict, List, Set, Optional, Tuple
 from loguru import logger
 from tree_sitter import Node as TSNode
 
-from deepwave_engine.models import CoreGraph, GenericNode, GenericEdge, GenericNodeType, GenericEdgeType
-from deepwave_engine.frameworks.base import FrameworkFilter
-from deepwave_engine.parser import TreeSitterParser, QueryEngine
-from deepwave_engine.parser.parse_cache import ParseCache
-from deepwave_engine.ignore import is_test_file
+from engine.models import CoreGraph, GenericNode, GenericEdge, GenericNodeType, GenericEdgeType
+from engine.frameworks.base import FrameworkFilter
+from engine.parser import TreeSitterParser, QueryEngine
+from engine.parser.parse_cache import ParseCache
+from engine.ignore import is_test_file
 
 
 class FastAPIFilter(FrameworkFilter):

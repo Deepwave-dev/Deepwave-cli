@@ -1,16 +1,16 @@
 from pathlib import Path
 from typing import Optional
 
-from deepwave_engine.frameworks.base import FrameworkFilter, DomainMapper
-from deepwave_engine.frameworks.fastapi.filter import FastAPIFilter
-from deepwave_engine.frameworks.fastapi.mapper import FastAPIDomainMapper
-from deepwave_engine.frameworks.django.filter import DjangoFilter
-from deepwave_engine.frameworks.django.mapper import DjangoDomainMapper
-from deepwave_engine.models import CoreGraph
-from deepwave_engine.graph.call_graph import CallGraphResult
-from deepwave_engine.binder.binder_treesitter import BinderTreeSitter
-from deepwave_engine.parser.query_engine import QueryEngine
-from deepwave_engine.parser.parse_cache import ParseCache
+from engine.frameworks.base import FrameworkFilter, DomainMapper
+from engine.frameworks.fastapi.filter import FastAPIFilter
+from engine.frameworks.fastapi.mapper import FastAPIDomainMapper
+from engine.frameworks.django.filter import DjangoFilter
+from engine.frameworks.django.mapper import DjangoDomainMapper
+from engine.models import CoreGraph
+from engine.graph.call_graph import CallGraphResult
+from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.parser.query_engine import QueryEngine
+from engine.parser.parse_cache import ParseCache
 
 
 class FrameworkFactory:

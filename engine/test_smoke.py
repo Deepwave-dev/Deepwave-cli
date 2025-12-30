@@ -13,12 +13,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 def test_imports():
     """Test that all basic imports work"""
     try:
-        from deepwave_engine import analyze_repo
-        from deepwave_engine.models import FileDetail, ProjectMetadata, ServiceGraph
-        from deepwave_engine.graph.extractor import scan_repository
-        from deepwave_engine.parser import TreeSitterParser, QueryEngine
-        from deepwave_engine.parser.parse_cache import ParseCache
-        from deepwave_engine.ignore import is_excluded, detect_language
+        from engine import analyze_repo
+        from engine.models import FileDetail, ProjectMetadata, ServiceGraph
+        from engine.graph.extractor import scan_repository
+        from engine.parser import TreeSitterParser, QueryEngine
+        from engine.parser.parse_cache import ParseCache
+        from engine.ignore import is_excluded, detect_language
 
         print("✅ All imports successful")
         return True
@@ -33,7 +33,7 @@ def test_imports():
 def test_scan_repository():
     """Test repository scanning on the current directory"""
     try:
-        from deepwave_engine.graph.extractor import scan_repository
+        from engine.graph.extractor import scan_repository
 
         # Test on the backend directory (should exist)
         test_path = Path(__file__).parent.parent / "backend"
@@ -57,8 +57,8 @@ def test_scan_repository():
 def test_parser():
     """Test parser initialization"""
     try:
-        from deepwave_engine.parser import TreeSitterParser
-        from deepwave_engine.parser.parse_cache import ParseCache
+        from engine.parser import TreeSitterParser
+        from engine.parser.parse_cache import ParseCache
 
         parser = TreeSitterParser("python")
         print(f"✅ Parser initialized: {parser.get_language()}")
@@ -75,7 +75,7 @@ def test_parser():
 
 
 if __name__ == "__main__":
-    print("🧪 Running smoke tests for deepwave_engine...\n")
+    print("🧪 Running smoke tests for engine...\n")
 
     results = []
     results.append(("Imports", test_imports()))

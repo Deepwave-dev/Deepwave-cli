@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 from loguru import logger
 
-from deepwave_engine.ignore import discover_python_files
+from engine.ignore import discover_python_files
 
 
 class FrameworkDetector:

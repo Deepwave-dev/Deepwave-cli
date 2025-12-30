@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, List, Optional, Any
-from deepwave_engine.models import CoreGraph
-from deepwave_engine.models import GenericNode
-from deepwave_engine.models import GraphNode, GraphEdge
+from engine.models import CoreGraph
+from engine.models import GenericNode
+from engine.models import GraphNode, GraphEdge
 
 
 class FrameworkFilter(ABC):

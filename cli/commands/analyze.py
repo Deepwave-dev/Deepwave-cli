@@ -5,9 +5,9 @@ from pathlib import Path
 from datetime import datetime
 from git import Repo, InvalidGitRepositoryError
 
-from deepwave_engine import analyze_repo
-from deepwave_engine.models import ProjectMetadata
-from deepwave_engine.bundle import write_bundle
+from engine import analyze_repo
+from engine.models import ProjectMetadata
+from engine.bundle import write_bundle
 from .upload import upload_bundle
 
 

@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
-from deepwave_engine.parser import TreeSitterParser, QueryEngine
-from deepwave_engine.parser.import_analyzer import ImportAnalyzer
-from deepwave_engine.parser.import_info import ImportInfo
-from deepwave_engine.parser.parse_cache import ParseCache
-from deepwave_engine.ignore import file_to_module_path
+from engine.parser import TreeSitterParser, QueryEngine
+from engine.parser.import_analyzer import ImportAnalyzer
+from engine.parser.import_info import ImportInfo
+from engine.parser.parse_cache import ParseCache
+from engine.ignore import file_to_module_path
 
 
 class ImportGraphTreeSitter:

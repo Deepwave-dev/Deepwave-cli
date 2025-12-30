@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from loguru import logger
 from tree_sitter import Tree, Node as TSNode
 
-from deepwave_engine.models import FunctionNode, NodeType
-from deepwave_engine.models import GraphEdge, EdgeRelation
-from deepwave_engine.models import CoreGraph, GenericNode, GenericNodeType
-from deepwave_engine.binder.binder_treesitter import BinderTreeSitter
-from deepwave_engine.parser import TreeSitterParser, QueryEngine
-from deepwave_engine.parser.parse_cache import ParseCache
-from deepwave_engine.ignore import file_to_module_path
+from engine.models import FunctionNode, NodeType
+from engine.models import GraphEdge, EdgeRelation
+from engine.models import CoreGraph, GenericNode, GenericNodeType
+from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.parser import TreeSitterParser, QueryEngine
+from engine.parser.parse_cache import ParseCache
+from engine.ignore import file_to_module_path
 
 
 @dataclass

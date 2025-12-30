@@ -5,7 +5,7 @@ from tree_sitter import Tree, Node as TSNode
 from pathlib import Path
 from loguru import logger
 
-from deepwave_engine.parser.import_info import ImportInfo
+from engine.parser.import_info import ImportInfo
 
 
 class ImportAnalyzer:

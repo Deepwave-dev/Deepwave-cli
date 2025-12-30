@@ -30,7 +30,6 @@ Thumbs.db
 # PyInstaller
 *.spec.bak
 *.manifest
-*.spec
 
 # Testing
 .pytest_cache/
