@@ -66,21 +66,45 @@ check_existing() {
 create_install_dir() {
     mkdir -p "${INSTALL_DIR}"
     if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
-        echo -e "${YELLOW}⚠ ${INSTALL_DIR} is not in your PATH${NC}"
-        echo -e "Add this to your ~/.bashrc, ~/.zshrc, or ~/.profile:"
-        echo -e "${GREEN}export PATH=\"\${HOME}/.local/bin:\${PATH}\"${NC}"
-        read -p "Add to PATH now? (y/N) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            SHELL_RC="${HOME}/.$(basename ${SHELL})rc"
-            if [ -f "${SHELL_RC}" ]; then
-                echo "export PATH=\"\${HOME}/.local/bin:\${PATH}\"" >> "${SHELL_RC}"
-                echo -e "${GREEN}✓ Added to ${SHELL_RC}${NC}"
-                echo -e "${YELLOW}Run: source ${SHELL_RC}${NC}"
-            else
-                echo -e "${YELLOW}⚠ Could not detect shell RC file. Please add manually.${NC}"
+        # Automatically add to PATH (don't ask, just do it)
+        SHELL_RC=""
+        
+        # Detect shell and find appropriate RC file
+        if [ -n "${ZSH_VERSION}" ]; then
+            SHELL_RC="${HOME}/.zshrc"
+        elif [ -n "${BASH_VERSION}" ]; then
+            SHELL_RC="${HOME}/.bashrc"
+            # Fallback to .bash_profile if .bashrc doesn't exist
+            if [ ! -f "${SHELL_RC}" ]; then
+                SHELL_RC="${HOME}/.bash_profile"
             fi
+        else
+            # Try common RC files
+            for rc in "${HOME}/.profile" "${HOME}/.bashrc" "${HOME}/.zshrc"; do
+                if [ -f "${rc}" ]; then
+                    SHELL_RC="${rc}"
+                    break
+                fi
+            done
         fi
+        
+        # Add to PATH if we found an RC file
+        if [ -n "${SHELL_RC}" ]; then
+            # Check if already added
+            if ! grep -q "${INSTALL_DIR}" "${SHELL_RC}" 2>/dev/null; then
+                echo "" >> "${SHELL_RC}"
+                echo "# Added by Deepwave CLI installer" >> "${SHELL_RC}"
+                echo "export PATH=\"\${HOME}/.local/bin:\${PATH}\"" >> "${SHELL_RC}"
+                echo -e "${GREEN}✓ Added ${INSTALL_DIR} to PATH in ${SHELL_RC}${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠ Could not detect shell RC file.${NC}"
+            echo -e "Add this to your shell config:"
+            echo -e "${GREEN}export PATH=\"\${HOME}/.local/bin:\${PATH}\"${NC}"
+        fi
+        
+        # Note: User needs to restart shell or source the file
+        echo -e "${YELLOW}Note: Restart your terminal or run: source ${SHELL_RC:-~/.zshrc}${NC}"
     fi
 }
 
