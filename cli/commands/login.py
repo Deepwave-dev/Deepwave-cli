@@ -1,8 +1,8 @@
 """Login command."""
 
 import click
-from ..config import get_api_url, set_auth_token
-from ..auth import login_with_token, device_code_flow
+from cli.config import get_api_url, set_auth_token
+from cli.auth import login_with_token, device_code_flow
 
 
 @click.command()

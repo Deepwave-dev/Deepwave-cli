@@ -4,7 +4,7 @@ import time
 import requests
 from typing import Optional
 
-from .config import get_api_url, set_auth_token
+from cli.config import get_api_url, set_auth_token
 
 
 def device_code_flow(api_url: str) -> str:

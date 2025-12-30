@@ -3,9 +3,9 @@
 import click
 from pathlib import Path
 
-from .commands.login import login
-from .commands.analyze import analyze
-from .commands.upload import upload
+from cli.commands.login import login
+from cli.commands.analyze import analyze
+from cli.commands.upload import upload
 
 
 @click.group()

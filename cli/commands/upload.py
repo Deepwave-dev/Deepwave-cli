@@ -5,7 +5,7 @@ import requests
 from pathlib import Path
 from typing import Optional
 
-from ..config import get_api_url, get_auth_token
+from cli.config import get_api_url, get_auth_token
 
 
 def upload_bundle(bundle_path: Path, project_id: str, api_url: Optional[str] = None) -> None:

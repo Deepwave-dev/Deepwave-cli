@@ -8,7 +8,7 @@ from git import Repo, InvalidGitRepositoryError
 from engine import analyze_repo
 from engine.models import ProjectMetadata
 from engine.bundle import write_bundle
-from .upload import upload_bundle
+from cli.commands.upload import upload_bundle
 
 
 def detect_git_root(path: Path) -> Path:
