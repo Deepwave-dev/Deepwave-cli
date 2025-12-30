@@ -203,6 +203,16 @@ jobs:
           echo "📦 Artifacts to release:"
           find dist -type f -name "deepwave-*" | sort
 
+      - name: Flatten artifact structure
+        run: |
+          # Artifacts are downloaded to subdirectories, flatten them to dist/
+          mkdir -p dist_flat
+          find dist -type f -name "deepwave-*" -exec cp {} dist_flat/ \;
+          mv dist_flat/* dist/ 2>/dev/null || true
+          rmdir dist_flat 2>/dev/null || true
+          echo "📦 Files ready for release:"
+          ls -lh dist/deepwave-* || find dist -name "deepwave-*" -type f
+
       - name: Extract version from tag
         id: tag_version
         run: |
