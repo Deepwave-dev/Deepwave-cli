@@ -107,12 +107,9 @@ class QueryEngine:
 
     def _get_queries_directory(self) -> Path:
         """Get the path to the queries directory"""
-        # Handle PyInstaller's temp directory
         if getattr(sys, "frozen", False):
-            # Running as compiled binary (PyInstaller)
-            base_path = Path(sys._MEIPASS)
+            base_path = Path(sys._MEIPASS) / "engine" / "parser"
         else:
-            # Running as script
             base_path = Path(__file__).parent
 
         return base_path / "queries"

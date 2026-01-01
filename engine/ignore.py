@@ -68,7 +68,44 @@ def is_excluded(file_path: Path) -> bool:
     """Check if file path should be excluded (hardcoded default excludes)"""
     path_str = str(file_path)
     default_excludes = ["venv", "node_modules", ".git", "__pycache__", ".idea", ".vscode"]
-    return any(excluded in path_str for excluded in default_excludes)
+    if any(excluded in path_str for excluded in default_excludes):
+        return True
+
+    # Exclude generated files and lock files
+    filename = file_path.name.lower()
+    excluded_files = [
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "graph.json",
+        "stats.json",
+        "manifest.json",
+        "chunks.jsonl",
+    ]
+    if filename in excluded_files:
+        return True
+
+    # Exclude binary files (images, etc.)
+    binary_extensions = {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".ico",
+        ".svg",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".eot",
+        ".pdf",
+        ".zip",
+        ".tar",
+        ".gz",
+    }
+    if file_path.suffix.lower() in binary_extensions:
+        return True
+
+    return False
 
 
 def detect_language(file_path: Path) -> str:

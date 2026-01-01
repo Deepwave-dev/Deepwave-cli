@@ -15,16 +15,19 @@ curl -fsSL https://raw.githubusercontent.com/Deepwave-dev/Deepwave-cli/main/inst
 1. **Install the CLI** (see above)
 
 2. **Get your authentication token:**
+
    - Visit your Deepwave project
    - Click "Get CLI Token" button
    - Copy the token
 
 3. **Login:**
+
    ```bash
    deepwave login --token <your-token>
    ```
 
 4. **Analyze a repository:**
+
    ```bash
    cd /path/to/your/repo
    deepwave analyze . --project-id <your-project-id>
