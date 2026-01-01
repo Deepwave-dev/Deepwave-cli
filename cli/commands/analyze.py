@@ -53,8 +53,16 @@ def get_git_info(repo_path: Path) -> tuple[str, str, str]:
 @click.option("--commit-sha", help="Commit SHA (auto-detected from git if not provided)")
 @click.option("--output", type=click.Path(path_type=Path), help="Output directory for bundle")
 @click.option("--no-upload", is_flag=True, help="Skip automatic upload after bundle creation")
+@click.option("--keep-files", is_flag=True, help="Keep bundle files after successful upload")
 def analyze(
-    repo_path: Path, project_id: str, repo_url: str, branch: str, commit_sha: str, output: Path, no_upload: bool
+    repo_path: Path,
+    project_id: str,
+    repo_url: str,
+    branch: str,
+    commit_sha: str,
+    output: Path,
+    no_upload: bool,
+    keep_files: bool,
 ):
     """Analyze a repository and create bundle."""
     click.echo(f"🔍 Analyzing repository: {repo_path}")
@@ -97,8 +105,17 @@ def analyze(
         click.echo(f"  Creating bundle...")
         bundle_path = write_bundle(result, output_dir, tool_version="1.0.0")
 
+        # Clean up individual JSON files (they're in the ZIP)
+        manifest_path = output_dir / "manifest.json"
+        graph_path = output_dir / "graph.json"
+        chunks_path = output_dir / "chunks.jsonl"
+        stats_path = output_dir / "stats.json"
+
+        for json_file in [manifest_path, graph_path, chunks_path, stats_path]:
+            if json_file.exists():
+                json_file.unlink()
+
         click.echo(f"  ✅ Bundle created: {bundle_path.name}")
-        click.echo(f"     Location: {bundle_path}")
 
         if not no_upload:
             click.echo(f"  Uploading bundle...")
@@ -107,7 +124,12 @@ def analyze(
                 click.echo(f"  ✅ Upload complete!")
             except Exception as e:
                 click.echo(f"  ⚠️  Upload failed: {e}", err=True)
-                click.echo(f"     Bundle saved at: {bundle_path}")
+
+            # Delete bundle file after upload attempt (unless --keep-files is used)
+            if not keep_files:
+                if bundle_path.exists():
+                    bundle_path.unlink()
+                    click.echo(f"  🗑️  Bundle file cleaned up")
 
     except Exception as e:
         click.echo(f"❌ Analysis failed: {e}", err=True)

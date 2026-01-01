@@ -1,6 +1,6 @@
 # Deepwave CLI
 
-Command-line interface for analyzing Python codebases and uploading results to Deepwave.
+Command-line interface for analyzing codebases and uploading results to Deepwave.
 
 ## Installation
 
@@ -60,12 +60,20 @@ deepwave analyze <repo-path> <project-id> [OPTIONS]
 - `--branch TEXT` - Branch name (auto-detected from git)
 - `--commit-sha TEXT` - Commit SHA (auto-detected from git)
 - `--output PATH` - Output directory for bundle
-- `--no-upload` - Skip automatic upload
+- `--no-upload` - Skip automatic upload (keeps bundle files)
+- `--keep-files` - Keep bundle files after upload (even if upload fails)
 
 **Example:**
 
 ```bash
+# Analyze, upload, and clean up (default behavior)
+deepwave analyze . abc123def456
+
+# Analyze without uploading (keeps bundle files)
 deepwave analyze . abc123def456 --no-upload
+
+# Analyze, upload, but keep files
+deepwave analyze . abc123def456 --keep-files
 ```
 
 ### `deepwave upload`
