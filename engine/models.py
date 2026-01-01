@@ -5,7 +5,7 @@ These are simplified versions of the backend models, without database dependenci
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Set
 from pathlib import Path
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -98,58 +98,36 @@ class CoreGraph:
     nodes: Dict[str, GenericNode] = field(default_factory=dict)  # id -> node
     edges: Dict[str, GenericEdge] = field(default_factory=dict)  # id -> edge
 
-    # Indices for fast lookup
-    nodes_by_file: Dict[Path, List[str]] = field(default_factory=dict)  # file -> [node_ids]
-    nodes_by_type: Dict[GenericNodeType, List[str]] = field(default_factory=dict)  # type -> [node_ids]
-    nodes_by_name: Dict[str, List[str]] = field(default_factory=dict)  # name -> [node_ids]
+    # Indices for fast lookup (using sets for O(1) membership testing)
+    nodes_by_file: Dict[Path, Set[str]] = field(default_factory=dict)  # file -> {node_ids}
+    nodes_by_type: Dict[GenericNodeType, Set[str]] = field(default_factory=dict)  # type -> {node_ids}
+    nodes_by_name: Dict[str, Set[str]] = field(default_factory=dict)  # name -> {node_ids}
 
-    edges_by_type: Dict[GenericEdgeType, List[str]] = field(default_factory=dict)  # type -> [edge_ids]
-    edges_from_node: Dict[str, List[str]] = field(default_factory=dict)  # node_id -> [edge_ids]
-    edges_to_node: Dict[str, List[str]] = field(default_factory=dict)  # node_id -> [edge_ids]
+    edges_by_type: Dict[GenericEdgeType, Set[str]] = field(default_factory=dict)  # type -> {edge_ids}
+    edges_from_node: Dict[str, Set[str]] = field(default_factory=dict)  # node_id -> {edge_ids}
+    edges_to_node: Dict[str, Set[str]] = field(default_factory=dict)  # node_id -> {edge_ids}
 
     def add_node(self, node: GenericNode) -> None:
         """Add a node to the graph and update indices"""
         self.nodes[node.id] = node
+        self._update_node_indices(node)
 
-        # Update file index
-        if node.file_path not in self.nodes_by_file:
-            self.nodes_by_file[node.file_path] = []
-        if node.id not in self.nodes_by_file[node.file_path]:
-            self.nodes_by_file[node.file_path].append(node.id)
-
-        # Update type index
-        if node.node_type not in self.nodes_by_type:
-            self.nodes_by_type[node.node_type] = []
-        if node.id not in self.nodes_by_type[node.node_type]:
-            self.nodes_by_type[node.node_type].append(node.id)
-
-        # Update name index
-        if node.name not in self.nodes_by_name:
-            self.nodes_by_name[node.name] = []
-        if node.id not in self.nodes_by_name[node.name]:
-            self.nodes_by_name[node.name].append(node.id)
+    def _update_node_indices(self, node: GenericNode) -> None:
+        """Update all node indices - DRY principle with O(1) operations"""
+        self.nodes_by_file.setdefault(node.file_path, set()).add(node.id)
+        self.nodes_by_type.setdefault(node.node_type, set()).add(node.id)
+        self.nodes_by_name.setdefault(node.name, set()).add(node.id)
 
     def add_edge(self, edge: GenericEdge) -> None:
         """Add an edge to the graph and update indices"""
         self.edges[edge.id] = edge
+        self._update_edge_indices(edge)
 
-        # Update type index
-        if edge.edge_type not in self.edges_by_type:
-            self.edges_by_type[edge.edge_type] = []
-        if edge.id not in self.edges_by_type[edge.edge_type]:
-            self.edges_by_type[edge.edge_type].append(edge.id)
-
-        # Update source index
-        if edge.source_id not in self.edges_from_node:
-            self.edges_from_node[edge.source_id] = []
-        if edge.id not in self.edges_from_node[edge.source_id]:
-            self.edges_from_node[edge.source_id].append(edge.id)
-
-        # Update target index
-        if edge.target_id not in self.edges_to_node:
-            self.edges_to_node[edge.target_id] = []
-        if edge.id not in self.edges_to_node[edge.target_id]:
-            self.edges_to_node[edge.target_id].append(edge.id)
+    def _update_edge_indices(self, edge: GenericEdge) -> None:
+        """Update all edge indices - DRY principle with O(1) operations"""
+        self.edges_by_type.setdefault(edge.edge_type, set()).add(edge.id)
+        self.edges_from_node.setdefault(edge.source_id, set()).add(edge.id)
+        self.edges_to_node.setdefault(edge.target_id, set()).add(edge.id)
 
     def get_node(self, node_id: str) -> Optional[GenericNode]:
         """Get a node by ID"""
@@ -161,32 +139,32 @@ class CoreGraph:
 
     def get_nodes_by_type(self, node_type: GenericNodeType) -> List[GenericNode]:
         """Get all nodes of a specific type"""
-        node_ids = self.nodes_by_type.get(node_type, [])
+        node_ids = self.nodes_by_type.get(node_type, set())
         return [self.nodes[nid] for nid in node_ids if nid in self.nodes]
 
     def get_nodes_by_file(self, file_path: Path) -> List[GenericNode]:
         """Get all nodes in a specific file"""
-        node_ids = self.nodes_by_file.get(file_path, [])
+        node_ids = self.nodes_by_file.get(file_path, set())
         return [self.nodes[nid] for nid in node_ids if nid in self.nodes]
 
     def get_nodes_by_name(self, name: str) -> List[GenericNode]:
         """Get all nodes with a specific name"""
-        node_ids = self.nodes_by_name.get(name, [])
+        node_ids = self.nodes_by_name.get(name, set())
         return [self.nodes[nid] for nid in node_ids if nid in self.nodes]
 
     def get_edges_by_type(self, edge_type: GenericEdgeType) -> List[GenericEdge]:
         """Get all edges of a specific type"""
-        edge_ids = self.edges_by_type.get(edge_type, [])
+        edge_ids = self.edges_by_type.get(edge_type, set())
         return [self.edges[eid] for eid in edge_ids if eid in self.edges]
 
     def get_edges_from_node(self, node_id: str) -> List[GenericEdge]:
         """Get all edges originating from a node"""
-        edge_ids = self.edges_from_node.get(node_id, [])
+        edge_ids = self.edges_from_node.get(node_id, set())
         return [self.edges[eid] for eid in edge_ids if eid in self.edges]
 
     def get_edges_to_node(self, node_id: str) -> List[GenericEdge]:
         """Get all edges pointing to a node"""
-        edge_ids = self.edges_to_node.get(node_id, [])
+        edge_ids = self.edges_to_node.get(node_id, set())
         return [self.edges[eid] for eid in edge_ids if eid in self.edges]
 
     def get_children(self, node_id: str) -> List[GenericNode]:
@@ -406,10 +384,6 @@ class EntryPointNode(BaseNode):
     end_line: Optional[int] = None
 
 
-# Alias for compatibility
-GraphNode = BaseNode  # For backward compatibility
-
-
 class GraphEdge(BaseModel):
     """Edge representing a relationship between nodes"""
 
@@ -469,3 +443,12 @@ class CodebaseStats(BaseModel):
     services: int
     methods: int
     key_modules: List[KeyModule] = Field(default_factory=list)
+
+
+class AnalysisResult(BaseModel):
+    """Analysis result"""
+
+    graph: ServiceGraph = Field(..., description="Service graph")
+    stats: CodebaseStats = Field(..., description="Codebase statistics")
+    files: List[FileDetail] = Field(..., description="Files metadata")
+    framework: str = Field(..., description="Framework")

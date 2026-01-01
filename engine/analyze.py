@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Dict, Any, List
 
-from .models import ServiceGraph, CodebaseStats, ProjectMetadata
+from .models import AnalysisResult, ServiceGraph, CodebaseStats, ProjectMetadata
 from .graph.extractor import scan_repository
 from .graph.core_graph import CoreGraphBuilder
 from .graph.call_graph import CallGraphBuilderTreeSitter
@@ -70,7 +70,7 @@ def calculate_stats(graph: ServiceGraph, files_metadata: List, framework: str) -
     return StatsCalculator.calculate(graph, files_metadata, framework)
 
 
-def analyze_repo(repo_path: str, project_metadata: ProjectMetadata) -> Dict[str, Any]:
+def analyze_repo(repo_path: str, project_metadata: ProjectMetadata) -> AnalysisResult:
     """Pure function to analyze a repository."""
     repo_path_obj = Path(repo_path)
     if not repo_path_obj.exists():
@@ -85,9 +85,4 @@ def analyze_repo(repo_path: str, project_metadata: ProjectMetadata) -> Dict[str,
     framework = framework_detector.detect(repo_path_obj)
     stats = calculate_stats(graph, files_metadata, framework)
 
-    return {
-        "graph": graph,
-        "stats": stats,
-        "files": files_metadata,
-        "framework": framework,
-    }
+    return AnalysisResult(graph=graph, stats=stats, files=files_metadata, framework=framework)

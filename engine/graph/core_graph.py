@@ -327,19 +327,16 @@ class CoreGraphBuilder:
                         cls.child_ids.append(func.id)
 
                     # Mark function as method and update indices
-                    # First remove from FUNCTION index
-                    if func.id in self.graph.nodes_by_type.get(GenericNodeType.FUNCTION, []):
-                        self.graph.nodes_by_type[GenericNodeType.FUNCTION].remove(func.id)
+                    # First remove from FUNCTION index (if it exists)
+                    if GenericNodeType.FUNCTION in self.graph.nodes_by_type:
+                        self.graph.nodes_by_type[GenericNodeType.FUNCTION].discard(func.id)
 
                     # Change type to METHOD
                     func.node_type = GenericNodeType.METHOD
                     func.metadata["is_method"] = True
 
                     # Add to METHOD index
-                    if GenericNodeType.METHOD not in self.graph.nodes_by_type:
-                        self.graph.nodes_by_type[GenericNodeType.METHOD] = []
-                    if func.id not in self.graph.nodes_by_type[GenericNodeType.METHOD]:
-                        self.graph.nodes_by_type[GenericNodeType.METHOD].append(func.id)
+                    self.graph.nodes_by_type.setdefault(GenericNodeType.METHOD, set()).add(func.id)
 
     def _extract_decorator_edges(self, file_path: Path, tree) -> None:
         """Extract decorator edges (decorator decorates function/class)"""

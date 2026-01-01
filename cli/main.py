@@ -1,7 +1,4 @@
-"""CLI entrypoint."""
-
 import click
-from pathlib import Path
 
 from cli.commands.login import login
 from cli.commands.analyze import analyze
