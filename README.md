@@ -1,11 +1,17 @@
 # Deepwave CLI
 
-Command-line interface for analyzing codebases and uploading results to Deepwave.
+Command-line interface for analyzing Python codebases and uploading results to Deepwave.
 
 ## Installation
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Deepwave-dev/Deepwave-cli/main/install.sh | bash
+```
+
+Or install via pip:
+
+```bash
+pip install deepwave-cli
 ```
 
 Or build from source:
@@ -18,61 +24,83 @@ pip install -r cli/requirements.txt
 
 ## Quick Start
 
-1. **Get your authentication token** from [app.deepwave.dev](https://app.deepwave.dev)
-
-2. **Login:**
+1. **Authenticate:**
 
    ```bash
+   # Device code flow (recommended)
+   deepwave login
+
+   # Or with a token
    deepwave login --token <your-token>
    ```
 
-3. **Analyze a repository:**
+2. **Analyze and upload:**
 
    ```bash
    cd /path/to/your/repo
    deepwave analyze . <your-project-id>
    ```
 
-4. **View results** in your Deepwave project dashboard.
+3. **View results** in your [Deepwave dashboard](https://app.deepwave.dev).
 
 ## Commands
 
 ### `deepwave login`
 
-Authenticate with the Deepwave API.
+Authenticate with the Deepwave API using OAuth device code flow or a token.
 
 ```bash
+# Interactive device code flow (opens browser)
+deepwave login
+
+# With a token
 deepwave login --token <token>
-deepwave login --api-url <url>  # Optional: override API URL
+
+# Override API URL
+deepwave login --api-url <url>
 ```
+
+**Device code flow:**
+
+1. Run `deepwave login`
+2. Visit the displayed URL and enter the code
+3. Authorize with your Google account
+4. Authentication completes automatically
 
 ### `deepwave analyze`
 
-Analyze a repository and create a bundle.
+Analyze a repository and automatically upload results to Deepwave.
 
 ```bash
 deepwave analyze <repo-path> <project-id> [OPTIONS]
 ```
+
+**Default behavior:**
+
+- Analyzes the repository
+- Creates a bundle
+- Uploads to Deepwave
+- Deletes bundle files after successful upload
 
 **Options:**
 
 - `--repo-url TEXT` - Repository URL (auto-detected from git)
 - `--branch TEXT` - Branch name (auto-detected from git)
 - `--commit-sha TEXT` - Commit SHA (auto-detected from git)
-- `--output PATH` - Output directory for bundle
-- `--no-upload` - Skip automatic upload (keeps bundle files)
-- `--keep-files` - Keep bundle files after upload (even if upload fails)
+- `--output PATH` - Output directory for bundle files
+- `--no-upload` - Skip upload (keeps bundle files)
+- `--keep-files` - Keep bundle files after upload
 
-**Example:**
+**Examples:**
 
 ```bash
-# Analyze, upload, and clean up (default behavior)
+# Analyze, upload, and clean up (default)
 deepwave analyze . abc123def456
 
-# Analyze without uploading (keeps bundle files)
+# Analyze without uploading
 deepwave analyze . abc123def456 --no-upload
 
-# Analyze, upload, but keep files
+# Analyze and upload, but keep bundle files
 deepwave analyze . abc123def456 --keep-files
 ```
 
@@ -84,33 +112,28 @@ Upload a previously created bundle.
 deepwave upload <bundle-path> --project-id <project-id>
 ```
 
-## Configuration
-
-Configuration is stored in `~/.deepwave/config.json`. The default API URL is `http://localhost:8000`.
-
 ## What Gets Analyzed
 
 The CLI analyzes your Python codebase and extracts:
 
-- Applications, routers, and endpoints (FastAPI/Django)
-- Service classes and methods
-- Dependency injection chains
-- Function call graphs
-- Import relationships
-- Class inheritance hierarchies
+- **FastAPI/Django**: Applications, routers, endpoints, and dependency injection
+- **Services**: Classes, methods, and service dependencies
+- **Call graphs**: Function call relationships
+- **Import graphs**: Module import relationships
+- **Inheritance**: Class hierarchies and inheritance chains
 
-Results are visualized in the Deepwave web interface.
+Results are visualized in the Deepwave web interface with interactive graphs and dependency maps.
 
 ## Framework Support
 
-- **FastAPI**: Full support
+- **FastAPI**: Full support (routers, dependencies, endpoints)
 - **Django**: Basic support
 
 ## Requirements
 
-- Python 3.12+ (for building from source)
+- Python 3.8+ (for building from source)
 - Git repository (for automatic metadata detection)
 
 ## License
 
-See [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
