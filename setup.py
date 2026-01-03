@@ -17,7 +17,7 @@ if requirements_file.exists():
 
 setup(
     name="deepwave-cli",
-    version="1.0.0",
+    version="1.0.7",
     description="Command-line interface for analyzing codebases and uploading results to Deepwave",
     long_description=long_description,
     long_description_content_type="text/markdown",
