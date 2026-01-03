@@ -18,7 +18,7 @@ def upload_bundle(bundle_path: Path, project_id: str, api_url: Optional[str] = N
     with httpx.Client(timeout=30.0) as client:
         try:
             # Step 1: Create run
-            create_response = client.post(f"{api_url}/api/v1/runs", json={"project_id": project_id}, headers=headers)
+            create_response = client.post(f"{api_url}/api/v1/runs/", json={"project_id": project_id}, headers=headers)
             create_response.raise_for_status()
             run_data = create_response.json()
             run_id = run_data["id"]
