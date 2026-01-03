@@ -4,18 +4,17 @@ import json
 import zipfile
 import hashlib
 from pathlib import Path
-from typing import Dict, Any
 
 from .schema import Bundle, Manifest
-from ..models import ServiceGraph, CodebaseStats
+from ..models import ServiceGraph, CodebaseStats, AnalysisResult
 
 
-def write_bundle(result: Dict[str, Any], output_dir: Path, tool_version: str = "1.0.0") -> Path:
+def write_bundle(result: AnalysisResult, output_dir: Path, tool_version: str = "1.0.0") -> Path:
     """Write analysis results to bundle files and create zip archive."""
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    graph: ServiceGraph = result["graph"]
-    stats: CodebaseStats = result["stats"]
+    graph: ServiceGraph = result.graph
+    stats: CodebaseStats = result.stats
     project_metadata = graph.metadata
 
     manifest = Manifest(
