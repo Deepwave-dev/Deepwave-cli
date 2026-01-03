@@ -6,7 +6,7 @@
 
 Deepwave CLI is a command-line tool that analyzes codebases, extracts service graphs, routers, endpoints, call graphs, and dependency relationships, then uploads the results to Deepwave for interactive visualization. Understand your codebase architecture, track dependencies, and visualize your application's structure.
 
-**Learn more at [app.deepwave.dev](https://app.deepwave.dev)**.
+**Learn more at [deepwave.dev](https://deepwave.dev)**.
 
 <img src="./demo.webp" />
 
@@ -47,7 +47,7 @@ cd /path/to/your/repo
 deepwave analyze . <your-project-id>
 ```
 
-3. View results in your [Deepwave dashboard](https://app.deepwave.dev).
+3. View results in your [Deepwave dashboard](https://deepwave.dev).
 
 ## Commands
 
@@ -66,7 +66,7 @@ deepwave login --token <token>
 **Device code flow:**
 
 1. Run `deepwave login`
-2. Visit [Deepwave Auth](https://app.deepwave.dev/device) and enter the code
+2. Visit [Deepwave Auth](https://deepwave.dev/device) and enter the code
 3. Authorize with your Google account
 4. Authentication completes automatically
 
