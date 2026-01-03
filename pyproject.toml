@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deepwave-cli"
-version = "1.0.8"
+version = "1.0.9"
 description = "Command-line interface for analyzing codebases and uploading results to Deepwave"
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
