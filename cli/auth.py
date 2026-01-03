@@ -23,25 +23,46 @@ def device_code_flow(api_url: str) -> str:
         print(f"\n⏳ Waiting for authentication...")
 
         start_time = time.time()
+        first_poll = True
+
         while time.time() - start_time < expires_in:
-            time.sleep(interval)
-
-            token_response = client.post(f"{api_url}/api/v1/auth/device-token", json={"device_code": device_code})
-
-            if token_response.status_code == 200:
-                token_data = token_response.json()
-                return token_data["access_token"]
-            elif token_response.status_code == 400:
-                error_data = token_response.json()
-                error_detail = error_data.get("detail", "")
-
-                if error_detail == "authorization_pending":
-                    print(".", end="", flush=True)
-                    continue
-                else:
-                    raise Exception(error_detail)
+            # Wait before polling (give user extra time on first poll to see the code)
+            if first_poll:
+                # Give user a bit more time on first poll to read and navigate to the page
+                time.sleep(min(interval, 3))
+                first_poll = False
             else:
-                token_response.raise_for_status()
+                time.sleep(interval)
+
+            try:
+                token_response = client.post(f"{api_url}/api/v1/auth/device-token", json={"device_code": device_code})
+
+                if token_response.status_code == 200:
+                    token_data = token_response.json()
+                    return token_data["access_token"]
+                elif token_response.status_code == 400:
+                    try:
+                        error_data = token_response.json()
+                        error_detail = error_data.get("detail", "")
+
+                        # Handle authorization_pending (normal case - user hasn't authorized yet)
+                        if error_detail == "authorization_pending":
+                            print(".", end="", flush=True)
+                            continue
+                        else:
+                            # For other 400 errors, continue polling (might be transient)
+                            print(".", end="", flush=True)
+                            continue
+                    except (ValueError, TypeError):
+                        # Invalid JSON in error response - continue polling
+                        print(".", end="", flush=True)
+                        continue
+                else:
+                    token_response.raise_for_status()
+            except httpx.HTTPError:
+                # Network errors - continue polling
+                print(".", end="", flush=True)
+                continue
 
         raise Exception("Authentication timed out")
 

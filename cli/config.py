@@ -27,7 +27,7 @@ def save_config(config: dict) -> None:
 def get_api_url() -> str:
     """Get API base URL from config or environment."""
     config = get_config()
-    return config.get("api_url", "http://localhost:8000")
+    return config.get("api_url", "https://deepframe.onrender.com")
 
 
 def get_auth_token() -> Optional[str]:

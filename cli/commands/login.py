@@ -26,5 +26,6 @@ def login(token: Optional[str], api_url: Optional[str]) -> None:
             set_auth_token(token)
             click.echo("✅ Login successful!")
     except Exception as e:
-        click.echo(f"Authentication error: {e}", err=True)
+        error_msg = str(e) if str(e) else "Unknown error"
+        click.echo(f"❌ Authentication failed: {error_msg}", err=True)
         raise click.Abort()
