@@ -1,20 +1,30 @@
 # Deepwave CLI
 
-Command-line interface for analyzing Python codebases and uploading results to Deepwave.
+![](https://img.shields.io/badge/Python-3.8%2B-brightgreen?style=flat-square) [![PyPI]](https://pypi.org/project/deepwave-cli/)
 
-## Installation
+[PyPI]: https://img.shields.io/pypi/v/deepwave-cli.svg?style=flat-square
+
+Deepwave CLI is a command-line tool that analyzes codebases, extracts service graphs, routers, endpoints, call graphs, and dependency relationships, then uploads the results to Deepwave for interactive visualization. Understand your codebase architecture, track dependencies, and visualize your application's structure.
+
+**Learn more at [app.deepwave.dev](https://app.deepwave.dev)**.
+
+## Get started
+
+1. Install Deepwave CLI:
+
+**MacOS/Linux/Windows:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Deepwave-dev/Deepwave-cli/main/install.sh | bash
 ```
 
-Or install via pip:
+**PyPI:**
 
 ```bash
 pip install deepwave-cli
 ```
 
-Or build from source:
+**From source:**
 
 ```bash
 git clone https://github.com/Deepwave-dev/Deepwave-cli.git
@@ -22,26 +32,20 @@ cd Deepwave-cli
 pip install -r cli/requirements.txt
 ```
 
-## Quick Start
+NOTE: Requires [Python 3.8+](https://www.python.org/downloads/) and a Git repository for automatic metadata detection.
 
-1. **Authenticate:**
+2. Authenticate and analyze:
 
-   ```bash
-   # Device code flow (recommended)
-   deepwave login
+```bash
+# Login (interactive device code flow) using Deepwave.dev auth
+deepwave login
 
-   # Or with a token
-   deepwave login --token <your-token>
-   ```
+# Analyze your repository
+cd /path/to/your/repo
+deepwave analyze . <your-project-id>
+```
 
-2. **Analyze and upload:**
-
-   ```bash
-   cd /path/to/your/repo
-   deepwave analyze . <your-project-id>
-   ```
-
-3. **View results** in your [Deepwave dashboard](https://app.deepwave.dev).
+3. View results in your [Deepwave dashboard](https://app.deepwave.dev).
 
 ## Commands
 
@@ -55,15 +59,12 @@ deepwave login
 
 # With a token
 deepwave login --token <token>
-
-# Override API URL
-deepwave login --api-url <url>
 ```
 
 **Device code flow:**
 
 1. Run `deepwave login`
-2. Visit the displayed URL and enter the code
+2. Visit [Deepwave Auth](https://app.deepwave.dev/device) and enter the code
 3. Authorize with your Google account
 4. Authentication completes automatically
 
@@ -129,10 +130,9 @@ Results are visualized in the Deepwave web interface with interactive graphs and
 - **FastAPI**: Full support (routers, dependencies, endpoints)
 - **Django**: Basic support
 
-## Requirements
+## Reporting Bugs
 
-- Python 3.8+ (for building from source)
-- Git repository (for automatic metadata detection)
+We welcome your feedback. File a [GitHub issue](https://github.com/Deepwave-dev/Deepwave-cli/issues) to report bugs or suggest features.
 
 ## License
 
