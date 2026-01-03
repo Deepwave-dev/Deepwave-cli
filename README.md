@@ -8,6 +8,8 @@ Deepwave CLI is a command-line tool that analyzes codebases, extracts service gr
 
 **Learn more at [app.deepwave.dev](https://app.deepwave.dev)**.
 
+<img src="./demo.webp" />
+
 ## Get started
 
 1. Install Deepwave CLI:
