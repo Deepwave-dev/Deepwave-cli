@@ -1,12 +1,13 @@
 import click
 
+from cli import __version__
 from cli.commands.login import login
 from cli.commands.analyze import analyze
 from cli.commands.upload import upload
 
 
 @click.group()
-@click.version_option(version="1.0.11", prog_name="deepwave")
+@click.version_option(version=__version__, prog_name="deepwave")
 def cli():
     """Deepwave CLI - Analyze repositories locally and upload results."""
     pass
