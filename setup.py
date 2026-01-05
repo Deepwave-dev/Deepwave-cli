@@ -3,6 +3,13 @@
 from setuptools import setup, find_packages
 from pathlib import Path
 
+# Read version from VERSION file (single source of truth)
+version_file = Path(__file__).parent / "VERSION"
+if version_file.exists():
+    version = version_file.read_text().strip()
+else:
+    version = "0.0.0"
+
 # Read README for long description
 readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text() if readme_file.exists() else ""
@@ -17,7 +24,7 @@ if requirements_file.exists():
 
 setup(
     name="deepwave-cli",
-    version="1.0.11",
+    version=version,
     description="Command-line interface for analyzing codebases and uploading results to Deepwave",
     long_description=long_description,
     long_description_content_type="text/markdown",
