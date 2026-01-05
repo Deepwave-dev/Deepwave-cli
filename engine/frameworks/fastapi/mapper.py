@@ -97,11 +97,11 @@ class FastAPIDomainMapper(DomainMapper):
                 temp_id = f"function.{self.project_hash}.{generic_func.id.split(':')[-1]}"
                 self.function_lookup[(path_norm, generic_func.name, generic_func.start_line)] = temp_id
 
-        self._map_dependencies()
         self._map_services()
         self._map_methods()
-        self._map_functions()  # This will create actual FunctionNodes
+        self._map_functions()  # Map functions FIRST so dependency resolver can find them
         self._map_entry_points()
+        self._map_dependencies()  # Map dependencies AFTER functions so IDs match
 
         # Map edges
         self._map_edges()
@@ -224,6 +224,8 @@ class FastAPIDomainMapper(DomainMapper):
                 self.nodes.append(provider)
                 self.function_lookup[(provider_path_norm, provider.name, provider.start_line)] = provider.id
                 provider_id = provider.id
+            else:
+                pass
 
             provider_ids.add(provider_id)
             dependency_edges.append(self._create_edge(source_id, provider_id, EdgeRelation.depends_on, "depends_on"))
@@ -240,6 +242,8 @@ class FastAPIDomainMapper(DomainMapper):
                     self.nodes.append(nested)
                     self.function_lookup[(nested_path_norm, nested.name, nested.start_line)] = nested.id
                     nested_id = nested.id
+                else:
+                    pass
                 provider_ids.add(nested_id)
                 dependency_edges.append(self._create_edge(prev_id, nested_id, EdgeRelation.depends_on, "depends_on"))
                 prev_id = nested_id
