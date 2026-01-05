@@ -7,14 +7,14 @@ This filter analyzes the language-agnostic CoreGraph to identify FastAPI-specifi
 import re
 from pathlib import Path
 from typing import Dict, List, Set, Optional, Tuple
-from loguru import logger
 from tree_sitter import Node as TSNode
 
 from engine.models import CoreGraph, GenericNode, GenericEdge, GenericNodeType, GenericEdgeType
-from engine.frameworks.base import FrameworkFilter
+from engine.frameworks.base import FrameworkFilter, PatternMatcher
 from engine.parser import TreeSitterParser, QueryEngine
 from engine.parser.parse_cache import ParseCache
 from engine.ignore import is_test_file
+from engine.frameworks.fastapi.pattern_matcher import FastAPIPatternMatcher
 
 
 class FastAPIFilter(FrameworkFilter):
@@ -28,6 +28,7 @@ class FastAPIFilter(FrameworkFilter):
         self.import_graph = import_graph
         self.parser = parse_cache.parser
         self.query_engine = QueryEngine(self.parser, query_subdirectory="fastapi")
+        self.pattern_matcher: PatternMatcher = FastAPIPatternMatcher(import_graph, is_test_file)
 
         # Storage for identified patterns (GenericNodes that match FastAPI patterns)
         self.applications: List[GenericNode] = []
@@ -56,48 +57,33 @@ class FastAPIFilter(FrameworkFilter):
         self._find_functions(core_graph)
         self._find_entry_points(core_graph)
 
-        logger.info(
-            f"FastAPI filter complete: {len(self.applications)} apps, "
-            f"{len(self.routers)} routers, {len(self.endpoints)} endpoints, "
-            f"{len(self.dependencies)} dependencies, "
-            f"{len(self.services)} services, {len(self.methods)} methods, "
-            f"{len(self.functions)} functions, "
-            f"{len(self.entry_points)} entry points"
-        )
+    def _validate_import(self, node: GenericNode, core_graph: CoreGraph, required_imports: List[str]) -> bool:
+        """Validate required imports using semantic resolution."""
+        for required in required_imports:
+            resolved = self.import_graph.resolve_name(node.file_path, required)
+            if resolved and resolved[0]:
+                return True
+        return False
 
     def _find_applications(self, core_graph: CoreGraph) -> None:
-        """
-        Find FastAPI application instantiations in the CoreGraph.
-
-        Pattern: assignment where right-hand side is FastAPI() call
-        Example: app = FastAPI(title="My App")
-        """
-        assignments = core_graph.get_nodes_by_type(GenericNodeType.ASSIGNMENT)
-
-        for node in assignments:
-            if self._is_fastapi_instantiation(node, core_graph):
-                self.applications.append(node)
-
-        validated_apps = [
-            app for app in self.applications if self._validate_import(app, core_graph, ["FastAPI", "fastapi"])
-        ]
-        self.applications = validated_apps
+        """Find FastAPI application instantiations."""
+        self._find_and_validate(
+            core_graph,
+            GenericNodeType.ASSIGNMENT,
+            self.pattern_matcher.is_application_instance,
+            self.pattern_matcher.get_application_imports,
+            self.applications,
+        )
 
     def _find_routers(self, core_graph: CoreGraph) -> None:
-        """
-        Find APIRouter instantiations in the CoreGraph.
-
-        Pattern: assignment where right-hand side is APIRouter() call
-        Example: router = APIRouter(prefix="/users")
-        """
-        assignments = core_graph.get_nodes_by_type(GenericNodeType.ASSIGNMENT)
-
-        for node in assignments:
-            if self._is_apirouter_instantiation(node, core_graph):
-                self.routers.append(node)
-
-        validated_routers = [r for r in self.routers if self._validate_import(r, core_graph, ["APIRouter", "fastapi"])]
-        self.routers = validated_routers
+        """Find APIRouter instantiations."""
+        self._find_and_validate(
+            core_graph,
+            GenericNodeType.ASSIGNMENT,
+            self.pattern_matcher.is_routing_configuration,
+            self.pattern_matcher.get_routing_imports,
+            self.routers,
+        )
 
     def _find_endpoints(self, core_graph: CoreGraph) -> None:
         """
@@ -120,8 +106,9 @@ class FastAPIFilter(FrameworkFilter):
                 if not decorator_node:
                     continue
 
-                # Check if this is a router decorator
-                if self._is_router_decorator(decorator_node):
+                # Check if this is a request handler
+                handler_info = self.pattern_matcher.is_request_handler(func_node, core_graph)
+                if handler_info:
                     self.endpoints.append((func_node, decorator_node))
                     break
 
@@ -205,8 +192,8 @@ class FastAPIFilter(FrameworkFilter):
                         # Validate that Depends is imported
                         if self._validate_depends_import(func_node.file_path, core_graph):
                             detected_dependencies.append((func_node, depends_node, "function"))
-            except Exception as e:
-                logger.debug(f"Error detecting dependencies in {func_node.file_path}: {e}")
+            except Exception:
+                pass
 
         # 2. Find router-level dependencies
         for router_node in self.routers:
@@ -239,8 +226,8 @@ class FastAPIFilter(FrameworkFilter):
                             if router_node.start_line <= depends_line <= router_node.end_line:
                                 if self._validate_depends_import(router_node.file_path, core_graph):
                                     detected_dependencies.append((router_node, depends_node, "router"))
-            except Exception as e:
-                logger.debug(f"Error detecting router dependencies in {router_node.file_path}: {e}")
+            except Exception:
+                pass
 
         self.dependencies = detected_dependencies
 
@@ -266,63 +253,6 @@ class FastAPIFilter(FrameworkFilter):
                 self.entry_points.append(candidate)
 
     # Helper methods for pattern detection
-
-    def _resolve_symbol(self, file_path: Path, symbol: str) -> tuple:
-        """Resolve symbol through ImportGraph. Returns (module, original_name) or (None, None)."""
-        resolved = self.import_graph.resolve_name(file_path, symbol)
-        return resolved if resolved else (None, None)
-
-    def _is_fastapi_instantiation(self, node: GenericNode, core_graph: CoreGraph) -> bool:
-        """Check if assignment is FastAPI() instantiation using semantic analysis."""
-        if (
-            not node.source_code
-            or self._is_test_file(node.file_path)
-            or self._is_string_literal_assignment(node.source_code)
-        ):
-            return False
-
-        # Extract call pattern: variable = Symbol(...)
-        match = re.search(r"=\s*(\w+)\s*\(", node.source_code)
-        if not match:
-            return False
-
-        symbol = match.group(1)
-        if symbol == "FastAPI":
-            return True
-
-        # Resolve through ImportGraph
-        module, original = self._resolve_symbol(node.file_path, symbol)
-        return module == "fastapi" and original == "FastAPI"
-
-    def _is_apirouter_instantiation(self, node: GenericNode, core_graph: CoreGraph) -> bool:
-        """Check if assignment is APIRouter() instantiation using semantic analysis."""
-        if (
-            not node.source_code
-            or self._is_test_file(node.file_path)
-            or self._is_string_literal_assignment(node.source_code)
-        ):
-            return False
-
-        match = re.search(r"=\s*(\w+)\s*\(", node.source_code)
-        if not match:
-            return False
-
-        symbol = match.group(1)
-        if symbol == "APIRouter":
-            return True
-
-        module, original = self._resolve_symbol(node.file_path, symbol)
-        return module == "fastapi" and original == "APIRouter"
-
-    def _is_router_decorator(self, decorator_node: GenericNode) -> bool:
-        """Check if decorator is a router HTTP method decorator (e.g., router.get, app.post)."""
-        if not decorator_node.name or "." not in decorator_node.name:
-            return False
-        parts = decorator_node.name.split(".")
-        if len(parts) != 2:
-            return False
-        http_methods = ["get", "post", "put", "delete", "patch", "options", "head", "trace"]
-        return parts[1].lower() in http_methods
 
     def _is_service_class(self, class_node: GenericNode, core_graph: CoreGraph) -> bool:
         """Check if class is a service (includes infrastructure, excludes model classes)."""
@@ -452,14 +382,6 @@ class FastAPIFilter(FrameworkFilter):
                 return True
         return False
 
-    def _validate_import(self, node: GenericNode, core_graph: CoreGraph, required_imports: List[str]) -> bool:
-        """Validate required imports using semantic resolution."""
-        for required in required_imports:
-            module, _ = self._resolve_symbol(node.file_path, required)
-            if module:
-                return True
-        return False
-
     def _instantiates_service(self, func: GenericNode, core_graph: CoreGraph) -> bool:
         """Check if function instantiates any service."""
         if not func.source_code:
@@ -470,27 +392,11 @@ class FastAPIFilter(FrameworkFilter):
         """Check if file is a test file."""
         return is_test_file(file_path)
 
-    def _is_string_literal_assignment(self, source_code: str) -> bool:
-        """Check if assignment is to a string literal (e.g., sample_code = "...")."""
-        if not source_code or "=" not in source_code:
-            return False
-        code = source_code.strip()
-        parts = code.split("=", 1)
-        if len(parts) < 2:
-            return False
-
-        rhs = parts[1].strip()
-
-        # Check if it starts with string delimiters
-        # Single or double quotes, or triple quotes
-        string_starters = ['"""', "'''", '"', "'"]
-        for starter in string_starters:
-            if rhs.startswith(starter):
-                return True
-
-        return False
-
     def _validate_depends_import(self, file_path: Path, core_graph: CoreGraph) -> bool:
         """Validate that Depends is imported using semantic resolution."""
-        module, original = self._resolve_symbol(file_path, "Depends")
-        return module and "fastapi" in module
+        resolved = self.import_graph.resolve_name(file_path, "Depends")
+        if not resolved:
+            return False
+        module, _ = resolved
+        required_modules = self.pattern_matcher.get_dependency_imports()
+        return module and any(req in module for req in required_modules)

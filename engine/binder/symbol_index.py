@@ -1,32 +1,25 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from tree_sitter import Tree, Node as TSNode
 
 from loguru import logger
-from engine.models import ApplicationNode, RouterNode, ServiceClassNode, BaseNode
-from engine.models import GenericNode
-from engine.parser import TreeSitterParser, QueryEngine
-from engine.parser.parse_cache import ParseCache
+from tree_sitter import Node as TSNode
+
+from engine.binder import ImportGraph
 from engine.ignore import discover_python_files
-from .import_graph_treesitter import ImportGraphTreeSitter
+from engine.models import ApplicationNode, ExpressionType, GenericNode, RouterNode, ServiceClassNode
+from engine.parser import ParseCache, QueryEngine
 
 
-class SymbolIndexTreeSitter:
+class SymbolIndex:
     """Read-only symbol index built from existing nodes; plus in-memory instance index using Tree-sitter."""
 
-    def __init__(
-        self,
-        project_hash: str,
-        project_path: Path,
-        import_graph: Optional[ImportGraphTreeSitter],
-        parse_cache: ParseCache,
-    ) -> None:
+    def __init__(self, project_hash: str, project_path: Path, import_graph: ImportGraph, parse_cache: ParseCache):
         self.project_hash = project_hash
         self.project_path = project_path
         self.import_graph = import_graph
         self.parse_cache = parse_cache
-        self.parser = parse_cache.parser
-        self.query_engine = QueryEngine(self.parser)
+
+        self.query_engine = QueryEngine(self.parse_cache.parser)
 
         # (file_rel, var) -> node
         self.app_vars: Dict[Tuple[str, str], ApplicationNode] = {}
@@ -45,9 +38,9 @@ class SymbolIndexTreeSitter:
 
     def _module_path_from_file_rel(self, file_rel: str) -> str:
         """
-        Convert file path to module path using ImportGraphTreeSitter's normalization.
+        Convert file path to module path using ImportGraph's normalization.
         This ensures consistent module path normalization across the system.
-        MUST use ImportGraphTreeSitter's module_to_file mapping to get the exact same module path.
+        MUST use ImportGraph's module_to_file mapping to get the exact same module path.
         """
         if not self.import_graph:
             # Should not happen in normal operation, but defensive
@@ -58,13 +51,13 @@ class SymbolIndexTreeSitter:
                 rel = rel[: -len(".py")]
             return rel.replace("/", ".")
 
-        # Use ImportGraphTreeSitter's module lookup - this is the authoritative source
+        # Use ImportGraph's module lookup - this is the authoritative source
         # Convert file_rel to Path and look up in module_to_file
-        # This ensures we use the EXACT same module path that ImportGraphTreeSitter uses
+        # This ensures we use the EXACT same module path that ImportGraph uses
         try:
             file_path = self.project_path / file_rel
             # Find the module name that points to this file
-            # ImportGraphTreeSitter already normalized all module paths correctly with import root detection
+            # ImportGraph already normalized all module paths correctly with import root detection
             for module_name, module_file in self.import_graph.module_to_file.items():
                 if module_file == file_path:
                     return module_name
@@ -72,7 +65,7 @@ class SymbolIndexTreeSitter:
             pass
 
         # If not found in module_to_file (shouldn't happen, but defensive),
-        # This means the file wasn't indexed by ImportGraphTreeSitter, which shouldn't happen
+        # This means the file wasn't indexed by ImportGraph, which shouldn't happen
         # Return a fallback but this indicates a bug
         rel = file_rel
         if rel.endswith("/__init__.py"):
@@ -146,7 +139,7 @@ class SymbolIndexTreeSitter:
                 # Use cache or parse if not cached
                 tree = self.parse_cache.get_tree(file_path)
                 if not tree:
-                    tree = self.parser.parse_file(file_path)
+                    tree = self.parse_cache.parser.parse_file(file_path)
                     if tree:
                         self.parse_cache.store_tree(file_path, tree)
                 if not tree:
@@ -402,11 +395,11 @@ class SymbolIndexTreeSitter:
                 if self.parse_cache:
                     tree = self.parse_cache.get_tree(py_file)
                     if not tree:
-                        tree = self.parser.parse_file(py_file)
+                        tree = self.parse_cache.parser.parse_file(py_file)
                         if tree:
                             self.parse_cache.store_tree(py_file, tree)
                 else:
-                    tree = self.parser.parse_file(py_file)
+                    tree = self.parse_cache.parser.parse_file(py_file)
                 if not tree:
                     continue
             except Exception:
@@ -455,7 +448,7 @@ class SymbolIndexTreeSitter:
         for ret_stmt in return_stmts:
             # Get the expression being returned
             for child in ret_stmt.children:
-                if child.type == "identifier":
+                if child.type == ExpressionType.IDENTIFIER:
                     var_name = child.text.decode("utf-8")
                     # Check if this variable is a known router
                     if (file_rel, var_name) in router_vars:
@@ -496,11 +489,11 @@ class SymbolIndexTreeSitter:
             if self.parse_cache:
                 tree = self.parse_cache.get_tree(file_path)
                 if not tree:
-                    tree = self.parser.parse_file(file_path)
+                    tree = self.parse_cache.parser.parse_file(file_path)
                     if tree:
                         self.parse_cache.store_tree(file_path, tree)
             else:
-                tree = self.parser.parse_file(file_path)
+                tree = self.parse_cache.parser.parse_file(file_path)
             if not tree:
                 continue
 
@@ -543,10 +536,10 @@ class SymbolIndexTreeSitter:
         for return_node in return_statements:
             # Look for class instantiation pattern: return ClassName()
             for child in return_node.children:
-                if child.type == "call":
+                if child.type == ExpressionType.CALL:
                     # Get the function being called
                     func_child = child.child_by_field_name("function")
-                    if func_child and func_child.type == "identifier":
+                    if func_child and func_child.type == ExpressionType.IDENTIFIER:
                         class_name = func_child.text.decode("utf-8", errors="ignore")
                         # Simple heuristic: if it starts with uppercase, it's likely a class
                         if class_name and class_name[0].isupper():

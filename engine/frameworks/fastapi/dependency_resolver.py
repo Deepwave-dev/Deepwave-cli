@@ -1,42 +1,40 @@
-"""
-FastAPI Dependency Resolver - Recursively resolves dependency injection chains
-
-This resolver analyzes Depends() calls to build complete dependency chains,
-handling nested dependencies, class-based dependencies, and edge cases.
-"""
+"""FastAPI Dependency Resolver - Recursively resolves dependency injection chains."""
 
 from pathlib import Path
-from typing import List, Set, Optional, Tuple, Dict
-from loguru import logger
+from typing import List, Set, Optional, Dict
 from tree_sitter import Node as TSNode
 
-from engine.models import FunctionNode
-from engine.binder.binder_treesitter import BinderTreeSitter
-from engine.binder.expression_resolver import ExpressionResolver
-from engine.parser import TreeSitterParser, QueryEngine
+from engine.models import ExpressionType, FunctionNode
+from engine.binder.symbol_resolver import SymbolResolver
+from engine.parser import QueryEngine
 from engine.ignore import file_to_module_path
+from engine.frameworks.base import DependencyResolver as BaseDependencyResolver
 
 
-class DependencyResolver:
+class FastAPIDependencyResolver(BaseDependencyResolver):
     """Resolves FastAPI dependency injection chains recursively."""
 
-    def __init__(self, binder: BinderTreeSitter, query_engine: QueryEngine):
+    def __init__(self, binder: SymbolResolver, query_engine: QueryEngine, project_hash: Optional[str] = None):
         """
         Initialize the dependency resolver.
 
         Args:
-            binder: BinderTreeSitter instance for symbol resolution
+            binder: SymbolResolver instance for symbol resolution
             query_engine: QueryEngine configured for FastAPI queries
+            project_hash: Project hash for creating FunctionNode IDs
         """
         self.binder = binder
         self.query_engine = query_engine
-        self.parser = TreeSitterParser("python")
-        self.resolver = ExpressionResolver(binder)
+        # Use parser from query_engine instead of creating new
+        self.parser = query_engine.parser
         # Create a separate query engine for generic queries (finding functions)
         self.generic_query_engine = QueryEngine(self.parser, query_subdirectory="generic")
+        self.project_hash = project_hash or "default"
 
         # Cache to avoid infinite loops and redundant work
         self._dependency_cache: Dict[str, List[FunctionNode]] = {}
+        # Cache for function lookups to avoid repeated project-wide searches
+        self._function_lookup_cache: Dict[str, Optional[FunctionNode]] = {}
 
     def resolve_dependency_chain(
         self, provider_node: FunctionNode, depth: int = 0, max_depth: int = 10, visited: Optional[Set[str]] = None
@@ -56,14 +54,7 @@ class DependencyResolver:
         if visited is None:
             visited = set()
 
-        # Base case: max depth reached
-        if depth >= max_depth:
-            logger.warning(f"Max dependency depth reached for {provider_node.name}")
-            return []
-
-        # Base case: circular dependency detected
-        if provider_node.id in visited:
-            logger.warning(f"Circular dependency detected: {provider_node.name}")
+        if depth >= max_depth or provider_node.id in visited:
             return []
 
         # Check cache
@@ -112,102 +103,71 @@ class DependencyResolver:
                     nested_deps = self.resolve_dependency_chain(nested_provider, depth + 1, max_depth, visited.copy())
                     dependencies.extend(nested_deps)
 
-        except Exception as e:
-            logger.debug(f"Error resolving dependencies for {provider_node.name}: {e}")
+        except Exception:
+            # Silently continue if dependency resolution fails for a provider
+            # This prevents one broken dependency from breaking the entire chain
+            pass
 
         # Cache the result
         self._dependency_cache[provider_node.id] = dependencies
 
         return dependencies
 
-    def _extract_provider_from_depends(self, depends_node: TSNode, file_path: Path) -> Optional[FunctionNode]:
-        """
-        Extract the provider function from a Depends() call node.
-
-        Args:
-            depends_node: Tree-sitter node representing the Depends() call
-            file_path: File containing the Depends() call
-
-        Returns:
-            FunctionNode of the provider, or None if it cannot be resolved
-        """
-        # Get the arguments node from Depends(...)
-        args_node = depends_node.child_by_field_name("arguments")
+    def extract_provider_from_node(self, node: TSNode, file_path: Path) -> Optional[FunctionNode]:
+        """Extract provider function from FastAPI Depends() node."""
+        args_node = node.child_by_field_name("arguments")
         if not args_node:
             return None
 
-        # Find the first argument (the provider)
         for child in args_node.children:
-            if child.type in ["identifier", "attribute", "call"]:
-                # Use the same resolution logic as resolve_provider_from_argument
-                # which includes the fallback to direct function lookup
+            if child.type in ["(", ")", ",", "\n"]:
+                continue
+
+            if child.type in ["identifier", "attribute", "call", "await"]:
                 provider = self.resolve_provider_from_argument(child, file_path)
                 if provider:
                     return provider
 
-                break
-
         return None
 
+    def _extract_provider_from_depends(self, depends_node: TSNode, file_path: Path) -> Optional[FunctionNode]:
+        """Extract the provider function from a Depends() call node."""
+        return self.extract_provider_from_node(depends_node, file_path)
+
     def _find_class_init(self, class_node, file_path: Path) -> Optional[FunctionNode]:
-        """
-        Find the __init__ method of a class for class-based dependencies.
+        """Find the __init__ method of a class for class-based dependencies."""
+        tree = self.parser.parse_file(file_path)
+        if not tree:
+            return None
 
-        Args:
-            class_node: The class node
-            file_path: File containing the class
+        results = self.generic_query_engine.execute_query(tree, "functions", validate_imports=False)
+        for result in results:
+            func_name = result.get_capture_text("function_name")
+            func_node = result.get_capture_node("function")
 
-        Returns:
-            FunctionNode representing __init__, or None
-        """
-        try:
-            tree = self.parser.parse_file(file_path)
-            if not tree:
-                return None
+            if func_name == "__init__" and func_node:
+                func_line = func_node.start_point[0] + 1
 
-            # Find all function definitions using generic query engine
-            results = self.generic_query_engine.execute_query(tree, "functions", validate_imports=False)
+                # If we have class bounds, verify __init__ is within them
+                if hasattr(class_node, "start_line") and hasattr(class_node, "end_line"):
+                    if not (class_node.start_line <= func_line <= class_node.end_line):
+                        continue
 
-            for result in results:
-                func_name = result.get_capture_text("function_name")
-                func_node = result.get_capture_node("function")
-
-                if func_name == "__init__" and func_node:
-                    # Check if this __init__ is within the class's line range
-                    func_line = func_node.start_point[0] + 1
-                    if hasattr(class_node, "start_line") and hasattr(class_node, "end_line"):
-                        if class_node.start_line <= func_line <= class_node.end_line:
-                            # Create a FunctionNode for __init__
-                            from engine.ignore import file_to_module_path
-
-                            module_name = file_to_module_path(file_path, self.binder.project_path)
-                            return FunctionNode.from_tree_sitter(
-                                node=func_node,
-                                file_path=file_path,
-                                project_path=self.binder.project_path,
-                                project_hash=self.binder.project_path.name,
-                                module_name=module_name,
-                                parent_class=class_node.name,
-                            )
-        except Exception as e:
-            logger.debug(f"Error finding __init__ for class: {e}")
-
+                # Found __init__ (either verified within class bounds, or no bounds available)
+                module_name = file_to_module_path(file_path, self.binder.project_path)
+                return FunctionNode.from_tree_sitter(
+                    node=func_node,
+                    file_path=file_path,
+                    project_path=self.binder.project_path,
+                    project_hash=self.project_hash,
+                    module_name=module_name,
+                    parent_class=class_node.name,
+                )
         return None
 
     def resolve_provider_from_argument(self, arg_node: TSNode, file_path: Path) -> Optional[FunctionNode]:
-        """
-        Resolve a dependency provider directly from a function argument node.
-
-        This is a convenience method for resolving Depends() arguments during mapping.
-
-        Args:
-            arg_node: Tree-sitter node of the argument (inside Depends(...))
-            file_path: File containing the argument
-
-        Returns:
-            FunctionNode of the provider, or None
-        """
-        resolved = self.resolver.resolve(arg_node, file_path)
+        """Resolve a dependency provider directly from a function argument node."""
+        resolved = self.binder.resolve_expression(file_path, arg_node)
 
         if isinstance(resolved, FunctionNode):
             return resolved
@@ -216,45 +176,88 @@ class DependencyResolver:
         if hasattr(resolved, "name") and hasattr(resolved, "path"):
             return self._find_class_init(resolved, file_path)
 
-        # If resolution failed, try to find the function directly in the file
-        if arg_node.type == "identifier":
-            func_name = arg_node.text.decode("utf-8", errors="ignore")
-            func_node = self._find_function_in_file(file_path, func_name)
-            if func_node:
-                return func_node
+        # Unwrap await expressions: await get_db() -> get_db()
+        node_to_check = arg_node
+        if arg_node.type == ExpressionType.AWAIT and arg_node.named_child_count > 0:
+            node_to_check = arg_node.named_child(0)
+
+        # Extract function name from identifier or call
+        if node_to_check.type == ExpressionType.IDENTIFIER:
+            func_name = node_to_check.text.decode("utf-8", errors="ignore")
+            # Skip FastAPI security schemes (HTTPBearer, OAuth2PasswordBearer, etc.)
+            if func_name in ("security", "oauth2_scheme", "bearer_scheme"):
+                return None
+            return self._find_function_in_file(file_path, func_name)
+        elif node_to_check.type == ExpressionType.CALL:
+            function_node = node_to_check.child_by_field_name("function")
+            if function_node and function_node.type == ExpressionType.IDENTIFIER:
+                func_name = function_node.text.decode("utf-8", errors="ignore")
+                return self._find_function_in_file(file_path, func_name)
 
         return None
 
     def _find_function_in_file(self, file_path: Path, function_name: str) -> Optional[FunctionNode]:
-        """
-        Directly find a function in a file by name.
+        """Find a function by name, searching in imported modules, current file, or project-wide."""
+        # Check cache first
+        if function_name in self._function_lookup_cache:
+            return self._function_lookup_cache[function_name]
 
-        This is a fallback when ExpressionResolver can't find the function.
-        """
-        try:
-            tree = self.parser.parse_file(file_path)
-            if not tree:
-                return None
+        # Strategy 1: Check if function is imported, then search in source file
+        resolved = self.binder.import_graph.resolve_name(file_path, function_name)
+        if resolved:
+            source_module, source_symbol = resolved
+            lookup_name = source_symbol if source_symbol else function_name
+            source_file = self.binder.import_graph.file_for_module(source_module)
+            if source_file:
+                func_node = self._search_function_in_file(source_file, lookup_name)
+                if func_node:
+                    self._function_lookup_cache[function_name] = func_node
+                    return func_node
 
-            # Find all functions using generic query engine
-            results = self.generic_query_engine.execute_query(tree, "functions", validate_imports=False)
+        # Strategy 2: Search in current file
+        func_node = self._search_function_in_file(file_path, function_name)
+        if func_node:
+            self._function_lookup_cache[function_name] = func_node
+            return func_node
 
-            for result in results:
-                func_name = result.get_capture_text("function_name")
-                func_node_ts = result.get_capture_node("function")
+        # Strategy 3: Search project-wide (last resort)
+        from engine.ignore import discover_python_files
 
-                if func_name == function_name and func_node_ts:
-                    # Create a FunctionNode
+        python_files = discover_python_files(self.binder.project_path)
+        for py_file in python_files:
+            if py_file == file_path:
+                continue
+            func_node = self._search_function_in_file(py_file, function_name)
+            if func_node:
+                self._function_lookup_cache[function_name] = func_node
+                return func_node
 
-                    module_name = file_to_module_path(file_path, self.binder.project_path)
-                    return FunctionNode.from_tree_sitter(
-                        node=func_node_ts,
-                        file_path=file_path,
-                        project_path=self.binder.project_path,
-                        project_hash=self.binder.project_path.name,
-                        module_name=module_name,
-                    )
-        except Exception as e:
-            logger.debug(f"Error in _find_function_in_file: {e}")
+        # Cache None to avoid repeated searches
+        self._function_lookup_cache[function_name] = None
+        return None
+
+    def _search_function_in_file(self, file_path: Path, function_name: str) -> Optional[FunctionNode]:
+        """Search for a function in a specific file."""
+        if not file_path.exists():
+            return None
+
+        tree = self.parser.parse_file(file_path)
+        if not tree:
+            return None
+
+        results = self.generic_query_engine.execute_query(tree, "functions", validate_imports=False)
+        for result in results:
+            func_name = result.get_capture_text("function_name")
+            func_node_ts = result.get_capture_node("function")
+
+            if func_name == function_name and func_node_ts:
+                module_name = file_to_module_path(file_path, self.binder.project_path)
+                return FunctionNode.from_tree_sitter(
+                    node=func_node_ts,
+                    file_path=file_path,
+                    project_path=self.binder.project_path,
+                    project_hash=self.project_hash,
+                    module_name=module_name,
+                )
 
         return None

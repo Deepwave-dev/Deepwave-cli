@@ -5,10 +5,13 @@ These are simplified versions of the backend models, without database dependenci
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Union, Set
+from typing import Dict, List, Optional, Any, Union, Set, TYPE_CHECKING
 from pathlib import Path
 from enum import Enum
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from tree_sitter import Node as TSNode
 
 
 # ============================================================================
@@ -255,6 +258,44 @@ class EnumMethod(str, Enum):
     OPTIONS = "OPTIONS"
 
 
+class ExpressionType(str, Enum):
+    """Tree-sitter expression node types used for symbol resolution.
+
+    These represent the different AST expression patterns that SymbolResolver can resolve
+    to domain nodes (ApplicationNode, RouterNode, etc.).
+
+    Examples:
+        IDENTIFIER:   Simple name references
+            - app = FastAPI()           # "app" is an identifier
+            - router = APIRouter()      # "router" is an identifier
+            - user_service = UserService()  # "user_service" is an identifier
+
+        ATTRIBUTE:    Dot-notation attribute access
+            - app.router                # "app.router" is an attribute
+            - api.v1.users              # "api.v1.users" is nested attributes
+            - architecture.router       # "architecture.router" is an attribute
+
+        CALL:         Function/method calls (factory functions)
+            - get_router()              # "get_router()" is a call
+            - app.include_router(...)   # "app.include_router(...)" is a call
+            - create_app()               # "create_app()" is a call
+
+        SUBSCRIPTION: Indexed access (currently unsupported)
+            - routers[0]                # "routers[0]" is a subscription
+            - apps["main"]               # "apps['main']" is a subscription
+
+        AWAIT:        Async await expressions
+            - await get_router()        # "await get_router()" is an await
+            - await app.router          # "await app.router" is an await
+    """
+
+    IDENTIFIER = "identifier"
+    ATTRIBUTE = "attribute"
+    CALL = "call"
+    SUBSCRIPTION = "subscription"
+    AWAIT = "await"
+
+
 class NodeType(str, Enum):
     """Domain-specific node types"""
 
@@ -363,6 +404,51 @@ class FunctionNode(BaseNode):
             start_line=generic_node.start_line,
             end_line=generic_node.end_line,
             is_async=is_async,
+        )
+
+    @classmethod
+    def from_tree_sitter(
+        cls,
+        node: "TSNode",
+        file_path: Path,
+        project_path: Path,
+        project_hash: str,
+        module_name: str,
+        parent_class: Optional[str] = None,
+    ) -> "FunctionNode":
+        """Create FunctionNode from Tree-sitter node."""
+        # Extract function name
+        name_node = node.child_by_field_name("name")
+        func_name = name_node.text.decode("utf-8") if name_node else "unknown"
+
+        # Determine if async
+        is_async = node.type == "async_function_definition" or (
+            node.parent and node.parent.type == "decorated_definition"
+        )
+
+        # Get line numbers
+        start_line = node.start_point[0] + 1
+        end_line = node.end_point[0] + 1
+
+        # Create relative path
+        relative_path = str(file_path.relative_to(project_path))
+
+        # Generate unique ID based on module, name, and line
+        unique_id = f"{module_name}.{func_name}.L{start_line}"
+        func_id = f"function.{project_hash}.{unique_id}"
+
+        return cls(
+            id=func_id,
+            project_hash=project_hash,
+            type=NodeType.function,
+            name=func_name,
+            path=relative_path,
+            summary=f"Function: {func_name}",
+            function_name=func_name,
+            start_line=start_line,
+            end_line=end_line,
+            is_async=is_async,
+            parent_class=parent_class,
         )
 
 

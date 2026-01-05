@@ -3,7 +3,6 @@
 from typing import Dict, List, Optional, Tuple
 from tree_sitter import Tree, Node as TSNode
 from pathlib import Path
-from loguru import logger
 
 from engine.parser.import_info import ImportInfo
 
@@ -34,10 +33,6 @@ class ImportAnalyzer:
         if node.type == "import_statement":
             self._process_import_statement(node)
         elif node.type == "import_from_statement":
-            # Debug: log the structure
-            from loguru import logger
-
-            logger.debug(f"Found import_from_statement, children: {[c.type for c in node.children]}")
             self._process_import_from_statement(node)
 
         # Recursively process children
@@ -74,12 +69,6 @@ class ImportAnalyzer:
 
     def _process_import_from_statement(self, node: TSNode) -> None:
         """Process: from fastapi import FastAPI, APIRouter"""
-        from loguru import logger
-
-        # Debug: log all children
-        logger.debug(f"Processing import_from_statement, children types: {[c.type for c in node.children]}")
-        logger.debug(f"Children text: {[c.text.decode('utf-8', errors='ignore')[:20] for c in node.children]}")
-
         # Extract module name - look for "from" keyword followed by dotted_name
         module_name = None
         seen_from = False
@@ -88,15 +77,12 @@ class ImportAnalyzer:
                 seen_from = True
             elif seen_from and child.type == "dotted_name":
                 module_name = child.text.decode("utf-8")
-                logger.debug(f"Found module_name: {module_name}")
                 break
             elif child.type == "dotted_name" and not module_name:
                 # Fallback: just get first dotted_name
                 module_name = child.text.decode("utf-8")
-                logger.debug(f"Found module_name (fallback): {module_name}")
 
         if not module_name or "fastapi" not in module_name:
-            logger.debug(f"Skipping import - module_name '{module_name}' doesn't contain 'fastapi'")
             return
 
         # Extract imported names
@@ -154,16 +140,13 @@ class ImportAnalyzer:
                 self.fastapi_imports[name] = module_name
                 if alias:
                     self.fastapi_aliases[alias] = name
-                    logger.debug(f"Added aliased import: {alias} -> {name} from {module_name}")
                 else:
                     self.fastapi_aliases[name] = name
-                    logger.debug(f"Added import: {name} from {module_name}")
         elif single_import_name:
             # Single import (e.g., from fastapi import FastAPI)
             if single_import_name in ["FastAPI", "APIRouter"]:
                 self.fastapi_imports[single_import_name] = module_name
                 self.fastapi_aliases[single_import_name] = single_import_name
-                logger.debug(f"Added import: {single_import_name} from {module_name}")
 
         # Also check for aliased imports in import_list (e.g., from fastapi import FastAPI as App)
         if import_list:
@@ -191,7 +174,6 @@ class ImportAnalyzer:
                     if name in ["FastAPI", "APIRouter"] and alias:
                         self.fastapi_imports[name] = module_name
                         self.fastapi_aliases[alias] = name
-                        logger.debug(f"Added aliased import: {alias} -> {name} from {module_name}")
 
     def _process_import_item(self, import_item: TSNode, module_name: str) -> None:
         """Process a single import item (identifier or dotted_import)"""
@@ -271,7 +253,7 @@ class ImportAnalyzer:
     def extract_all_imports(self, tree: Tree) -> List[ImportInfo]:
         """
         Extract all imports from a tree, returning structured ImportInfo objects.
-        This is used by ImportGraphTreeSitter to build the import graph.
+        This is used by ImportGraph to build the import graph.
 
         Returns:
             List of ImportInfo objects representing all import statements in the file

@@ -11,7 +11,7 @@ from engine.parser.parse_cache import ParseCache
 from engine.ignore import file_to_module_path
 
 
-class ImportGraphTreeSitter:
+class ImportGraph:
     """Project-wide import resolver using Tree-sitter - drop-in replacement for ImportGraph"""
 
     def __init__(self, project_path: Path, parse_cache: ParseCache) -> None:

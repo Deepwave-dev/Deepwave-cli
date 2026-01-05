@@ -1,11 +1,11 @@
-"""Binding infrastructure for semantic resolution of Tree-sitter nodes to graph nodes."""
-
-from .import_graph_treesitter import ImportGraphTreeSitter
-from .symbol_index_treesitter import SymbolIndexTreeSitter
-from .binder_treesitter import BinderTreeSitter
+from engine.binder.import_graph import ImportGraph
+from .symbol_index import SymbolIndex
+from .symbol_resolver import SymbolResolver
+from .resolution_strategy import ResolutionStrategy
 
 __all__ = [
-    "ImportGraphTreeSitter",
-    "SymbolIndexTreeSitter",
-    "BinderTreeSitter",
+    "ImportGraph",
+    "SymbolIndex",
+    "SymbolResolver",
+    "ResolutionStrategy",
 ]

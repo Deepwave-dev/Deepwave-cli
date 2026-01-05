@@ -7,7 +7,7 @@ from tree_sitter import Tree, Node as TSNode
 from engine.models import FunctionNode, NodeType
 from engine.models import GraphEdge, EdgeRelation
 from engine.models import CoreGraph, GenericNode, GenericNodeType
-from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.binder.symbol_resolver import SymbolResolver
 from engine.parser import TreeSitterParser, QueryEngine
 from engine.parser.parse_cache import ParseCache
 from engine.ignore import file_to_module_path
@@ -30,7 +30,7 @@ class CallGraphBuilderTreeSitter:
         project_hash: str,
         project_path: Path,
         core_graph: CoreGraph,
-        binder: BinderTreeSitter,
+        binder: SymbolResolver,
         parse_cache: ParseCache,
     ):
         self.project_hash = project_hash
@@ -223,7 +223,7 @@ class CallGraphBuilderTreeSitter:
                 # First, try to bind the object to see if it's a service instance or imported object
                 try:
                     if object_node.type == "identifier":
-                        bound_object = self.binder.bind_name("", file_path, object_node)
+                        bound_object = self.binder.resolve_identifier(file_path, object_node)
                         if bound_object:
                             # Object resolved to a service class or other node
                             # Look for method in the service class

@@ -11,14 +11,14 @@ from .parser import TreeSitterParser, QueryEngine
 from .parser.parse_cache import ParseCache
 from .frameworks.detector import FrameworkDetector
 from .frameworks.factory import FrameworkFactory
-from .binder.import_graph_treesitter import ImportGraphTreeSitter
-from .binder.symbol_index_treesitter import SymbolIndexTreeSitter
-from .binder.binder_treesitter import BinderTreeSitter
+from .binder.import_graph import ImportGraph
+from .binder.symbol_index import SymbolIndex
+from .binder.symbol_resolver import SymbolResolver
 from .stats import StatsCalculator
 
 
-def extract_graph(repo_path: Path, project_metadata: ProjectMetadata) -> ServiceGraph:
-    """Extract service graph from repository."""
+def extract_graph(repo_path: Path, project_metadata: ProjectMetadata) -> tuple[ServiceGraph, str]:
+    """Extract service graph from repository. Returns (graph, framework)."""
     files_metadata = scan_repository(repo_path)
     python_paths = [repo_path / file.path for file in files_metadata if file.language == "python"]
 
@@ -29,7 +29,7 @@ def extract_graph(repo_path: Path, project_metadata: ProjectMetadata) -> Service
     core_builder = CoreGraphBuilder(project_metadata, repo_path, parse_cache)
     core_graph = core_builder.build_graph(files=python_paths)
 
-    import_graph = ImportGraphTreeSitter(repo_path, parse_cache)
+    import_graph = ImportGraph(repo_path, parse_cache)
     import_graph.build(python_paths)
 
     framework_detector = FrameworkDetector()
@@ -39,10 +39,10 @@ def extract_graph(repo_path: Path, project_metadata: ProjectMetadata) -> Service
     )
     framework_filter.filter(core_graph)
 
-    symbol_index = SymbolIndexTreeSitter(project_metadata.project_hash, repo_path, import_graph, parse_cache)
+    symbol_index = SymbolIndex(project_metadata.project_hash, repo_path, import_graph, parse_cache)
     symbol_index.index_services(framework_filter.services)
     symbol_index.build_instance_index(python_paths)
-    binder = BinderTreeSitter(repo_path, import_graph, symbol_index)
+    binder = FrameworkFactory.create_symbol_resolver(repo_path, import_graph, symbol_index, framework)
 
     call_graph_builder = CallGraphBuilderTreeSitter(
         project_metadata.project_hash, repo_path, core_graph, binder, parse_cache
@@ -62,7 +62,7 @@ def extract_graph(repo_path: Path, project_metadata: ProjectMetadata) -> Service
     nodes, edges = domain_mapper.map()
     service_graph = ServiceGraph(nodes=nodes, edges=edges, metadata=project_metadata)
 
-    return service_graph
+    return service_graph, framework
 
 
 def calculate_stats(graph: ServiceGraph, files_metadata: List, framework: str) -> CodebaseStats:
@@ -79,10 +79,7 @@ def analyze_repo(repo_path: str, project_metadata: ProjectMetadata) -> AnalysisR
         raise ValueError(f"Repository path is not a directory: {repo_path}")
 
     files_metadata = scan_repository(repo_path_obj)
-    graph = extract_graph(repo_path_obj, project_metadata)
-
-    framework_detector = FrameworkDetector()
-    framework = framework_detector.detect(repo_path_obj)
+    graph, framework = extract_graph(repo_path_obj, project_metadata)
     stats = calculate_stats(graph, files_metadata, framework)
 
     return AnalysisResult(graph=graph, stats=stats, files=files_metadata, framework=framework)

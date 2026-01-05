@@ -5,7 +5,7 @@ from engine.models import CoreGraph
 from engine.frameworks.base import DomainMapper
 from engine.frameworks.django.filter import DjangoFilter
 from engine.graph.call_graph import CallGraphResult
-from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.binder.symbol_resolver import SymbolResolver
 from engine.parser.query_engine import QueryEngine
 
 
@@ -18,7 +18,7 @@ class DjangoDomainMapper(DomainMapper):
         django_filter: DjangoFilter,
         project_hash: str,
         call_graph_result: Optional[CallGraphResult] = None,
-        binder: Optional[BinderTreeSitter] = None,
+        binder: Optional[SymbolResolver] = None,
         query_engine: Optional[QueryEngine] = None,
     ):
         self.core_graph = core_graph

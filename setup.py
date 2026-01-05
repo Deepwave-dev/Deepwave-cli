@@ -32,7 +32,7 @@ setup(
         ],
     },
     install_requires=requirements,
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     entry_points={
         "console_scripts": [
             "deepwave=cli.main:cli",

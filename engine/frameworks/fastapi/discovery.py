@@ -1,101 +1,45 @@
-"""AST-based includes edge discoverer using ExpressionResolver.
-
-This FastAPI-specific discoverer finds app → router and router → router
-includes edges using AST queries and ExpressionResolver for robust resolution.
-"""
+"""FastAPI edge discoverer for includes relationships."""
 
 from pathlib import Path
 from typing import List, Optional
 from tree_sitter import Node as TSNode
 
-from engine.models import GraphEdge, EdgeRelation
-from engine.models import ApplicationNode, RouterNode
-from engine.binder.expression_resolver import ExpressionResolver
-from engine.binder.binder_treesitter import BinderTreeSitter
+from engine.models import GraphEdge, EdgeRelation, ApplicationNode, RouterNode
+from engine.binder.symbol_resolver import SymbolResolver
 from engine.parser.query_engine import QueryEngine
 from engine.parser.parse_cache import ParseCache
 from engine.frameworks.fastapi.filter import FastAPIFilter
+from engine.frameworks.base import EdgeDiscoverer
 from engine.ignore import discover_python_files
 
 
-class IncludesEdgeDiscoverer:
-    """
-    Discovers app → router and router → router includes edges.
-
-    Uses AST queries + ExpressionResolver to handle all edge cases:
-    - Simple: app.include_router(user_router)
-    - Module paths: app.include_router(architecture.router)
-    - Aliases: app.include_router(arch.router)
-    - Variables: app.include_router(my_router)
-    - Keyword args: app.include_router(router=user_router)
-    """
+class FastAPIEdgeDiscoverer(EdgeDiscoverer):
+    """Discovers app → router and router → router includes edges."""
 
     def __init__(
         self,
         fastapi_filter: FastAPIFilter,
-        binder: BinderTreeSitter,
+        binder: SymbolResolver,
         query_engine: QueryEngine,
         parse_cache: ParseCache,
         project_hash: str,
         generic_to_domain_id: dict,
     ):
-        """
-        Initialize the includes edge discoverer.
-
-        Args:
-            fastapi_filter: FastAPIFilter with identified applications and routers
-            binder: Binder for resolving expressions
-            query_engine: QueryEngine for AST queries
-            parse_cache: ParseCache for file trees
-            project_hash: Project hash for edge IDs
-            generic_to_domain_id: Mapping from GenericNode ID to GraphNode ID
-        """
         self.filter = fastapi_filter
         self.binder = binder
         self.query_engine = query_engine
         self.parse_cache = parse_cache
         self.project_hash = project_hash
         self.generic_to_domain_id = generic_to_domain_id
-        self.resolver = ExpressionResolver(binder)
 
     def discover(self) -> List[GraphEdge]:
-        """
-        Discover all includes edges.
-
-        Returns:
-            List of GraphEdge objects representing includes relationships
-        """
+        """Discover all includes edges."""
         edges = []
-
-        # Get all Python files from the project
         python_files = discover_python_files(self.binder.project_path)
 
-        # Find all include_router calls in all files
-        total_calls_found = 0
         for file_path in python_files:
             file_edges = self._find_includes_in_file(file_path)
             edges.extend(file_edges)
-            # Count include_router calls found
-            tree = self.parse_cache.get_tree(file_path)
-            if not tree:
-                tree = self.parse_cache.parser.parse_file(file_path)
-                if tree:
-                    self.parse_cache.store_tree(file_path, tree)
-            if tree:
-                query_string = """
-                (call
-                  function: (attribute
-                    object: (identifier) @object_var
-                    attribute: (identifier) @method_name
-                  )
-                  arguments: (argument_list) @args
-                )
-                """
-                results = self.query_engine.execute_query_string(tree, query_string, "include_router_calls")
-                for result in results:
-                    method_name = result.captures.get("method_name")
-                    if method_name and method_name.text.decode() == "include_router":
-                        total_calls_found += 1
 
         return edges
 
@@ -131,17 +75,15 @@ class IncludesEdgeDiscoverer:
             object_var_node = result.captures.get("object_var")
 
             # Try to resolve as application first
-            source_app = self.resolver.resolve_to_application(object_var_node, file_path)
+            resolved = self.binder.resolve_expression(file_path, object_var_node)
             source_id = None
 
-            if source_app:
+            if isinstance(resolved, ApplicationNode):
                 # Find the GenericNode for this application
-                source_id = self._match_app_to_generic(source_app)
-            else:
+                source_id = self._match_app_to_generic(resolved)
+            elif isinstance(resolved, RouterNode):
                 # Try to resolve as router
-                source_router = self.resolver.resolve_to_router(object_var_node, file_path)
-                if source_router:
-                    source_id = self._match_router_to_generic(source_router)
+                source_id = self._match_router_to_generic(resolved)
 
             if not source_id:
                 continue
@@ -169,15 +111,7 @@ class IncludesEdgeDiscoverer:
         return edges
 
     def _resolve_router_argument(self, args_node: TSNode, file_path: Path) -> Optional[RouterNode]:
-        """
-        Resolve router argument from argument list.
-
-        Handles:
-        - Positional: app.include_router(user_router)
-        - Keyword: app.include_router(router=user_router)
-        - Complex: app.include_router(architecture.router)
-        - Imported: app.include_router(case_priority_router) where router is imported
-        """
+        """Resolve router argument from argument list."""
         if not args_node or args_node.type != "argument_list":
             return None
 
@@ -190,9 +124,9 @@ class IncludesEdgeDiscoverer:
         # Find first non-punctuation, non-keyword argument
         for child in args_node.children:
             if is_valid_positional_argument(child):
-                router = self.resolver.resolve_to_router(child, file_path)
-                if router:
-                    return router
+                resolved = self.binder.resolve_expression(file_path, child)
+                if isinstance(resolved, RouterNode):
+                    return resolved
                 # Only try first positional argument (router is always first arg in include_router)
                 break
 
@@ -203,20 +137,14 @@ class IncludesEdgeDiscoverer:
                 if keyword_name and keyword_name.text.decode() == "router":
                     value = child.child_by_field_name("value")
                     if value:
-                        router = self.resolver.resolve_to_router(value, file_path)
-                        if router:
-                            return router
+                        resolved = self.binder.resolve_expression(file_path, value)
+                        if isinstance(resolved, RouterNode):
+                            return resolved
 
         return None
 
     def _match_app_to_generic(self, resolved_app: ApplicationNode) -> Optional[str]:
-        """
-        Match a resolved ApplicationNode to a GenericNode in the filter.
-
-        Tries multiple matching strategies:
-        1. Match by domain ID (direct ID match)
-        2. Match by app_var and file path
-        """
+        """Match a resolved ApplicationNode to a GenericNode in the filter."""
         # Strategy 1: Match by domain ID (direct match)
         if resolved_app.id in self.generic_to_domain_id.values():
             return resolved_app.id
@@ -241,14 +169,7 @@ class IncludesEdgeDiscoverer:
         return None
 
     def _match_router_to_generic(self, resolved_router: RouterNode) -> Optional[str]:
-        """
-        Match a resolved RouterNode to a GenericNode in the filter.
-
-        Tries multiple matching strategies:
-        1. Match by domain ID (direct ID match)
-        2. Match by router_var and file path
-        3. Match by router_var only (if same file)
-        """
+        """Match a resolved RouterNode to a GenericNode in the filter."""
         # Strategy 1: Match by domain ID (direct match)
         # The resolved_router.id should be in generic_to_domain_id.values()
         if resolved_router.id in self.generic_to_domain_id.values():
