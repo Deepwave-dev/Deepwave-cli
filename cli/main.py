@@ -6,7 +6,7 @@ from cli.commands.upload import upload
 
 
 @click.group()
-@click.version_option(version="1.0.9", prog_name="deepwave")
+@click.version_option(version="1.0.11", prog_name="deepwave")
 def cli():
     """Deepwave CLI - Analyze repositories locally and upload results."""
     pass
