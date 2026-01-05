@@ -1,4 +1,0 @@
-# LICENSE and README.md are automatically included by setuptools
-# .scm files are handled by package-data in pyproject.toml
-# This file can be removed if everything works without it
-
