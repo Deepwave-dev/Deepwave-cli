@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 # This is a placeholder - actual version comes from VERSION file via setup.py
 [project]
 name = "deepwave-cli"
-version = "1.0.12"
+version = "1.0.13"
 description = "Command-line interface for analyzing codebases and uploading results to Deepwave"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
