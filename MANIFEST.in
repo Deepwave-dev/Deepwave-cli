@@ -1,5 +1,4 @@
-include README.md
-include LICENSE
-include cli/requirements.txt
-recursive-include engine/parser/queries *.scm
+# LICENSE and README.md are automatically included by setuptools
+# .scm files are handled by package-data in pyproject.toml
+# This file can be removed if everything works without it
 

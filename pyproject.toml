@@ -2,26 +2,23 @@
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-# Note: Version is read from VERSION file at build time
-# This is a placeholder - actual version comes from VERSION file via setup.py
 [project]
 name = "deepwave-cli"
-version = "1.0.13"
+dynamic = ["version"]
 description = "Command-line interface for analyzing codebases and uploading results to Deepwave"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Deepwave", email = "support@deepwave.dev"}
 ]
+urls = {Homepage = "https://github.com/Deepwave-dev/Deepwave-cli"}
 keywords = ["code-analysis", "cli", "deepwave", "static-analysis"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -41,7 +38,10 @@ dependencies = [
 deepwave = "cli.main:cli"
 
 [tool.setuptools]
-packages = {find = {}}
+packages = {find = {exclude = ["tests", "*.tests", "*.tests.*", "venv"]}}
+
+[tool.setuptools.dynamic]
+version = {attr = "cli.__version__"}
 
 [tool.setuptools.package-data]
 engine = [
