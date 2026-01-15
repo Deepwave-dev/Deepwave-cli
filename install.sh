@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 # Configuration
 INSTALL_DIR="${HOME}/.local/bin"
 BINARY_NAME="deepwave"
-REPO_URL="https://github.com/Deepwave-dev/Deepwave-cli"  # Update with actual repo
+REPO_URL="https://github.com/Deepwave-dev/Deepwave-cli"
 RELEASE_URL="${REPO_URL}/releases/latest/download"
 
 # Detect OS and architecture
@@ -225,6 +225,5 @@ main() {
     fi
 }
 
-# Run main function
 main
 
