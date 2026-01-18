@@ -9,7 +9,7 @@ class FrameworkDetector:
     """Detects the framework used in a repository."""
 
     def detect(self, project_path: Path) -> str:
-        """Detect framework used in projects, returns 'fastapi', 'django', or 'unknown'."""
+        """Detect framework used in projects, returns 'fastapi', 'flask', 'django', or 'unknown'."""
         # Check dependency files first
         framework = self._check_dependencies(project_path)
         if framework:
@@ -30,6 +30,8 @@ class FrameworkDetector:
                     return "django"
                 if "fastapi" in content:
                     return "fastapi"
+                if "flask" in content:
+                    return "flask"
             except Exception:
                 pass
 
@@ -42,6 +44,8 @@ class FrameworkDetector:
                     return "django"
                 if "fastapi" in content:
                     return "fastapi"
+                if "flask" in content:
+                    return "flask"
             except Exception:
                 pass
 
@@ -55,6 +59,8 @@ class FrameworkDetector:
                 content = file_path.read_text()
                 if "from fastapi" in content or "import fastapi" in content:
                     return "fastapi"
+                if "from flask" in content or "import flask" in content:
+                    return "flask"
                 if "from django" in content or "import django" in content:
                     return "django"
             except Exception:
