@@ -26,6 +26,9 @@ class FrameworkFactory:
             # from engine.frameworks.django.resolution_strategy import DjangoResolutionStrategy
             # return DjangoResolutionStrategy()
             pass
+        elif framework == "flask":
+            from engine.frameworks.flask.resolution_strategy import FlaskResolutionStrategy
+            return FlaskResolutionStrategy()
 
         # Default to FastAPI
         from engine.frameworks.fastapi.resolution_strategy import FastAPIResolutionStrategy
@@ -54,6 +57,9 @@ class FrameworkFactory:
         """Get the appropriate filter for the framework."""
         if framework == "django":
             return DjangoFilter(project_hash, project_path)
+        elif framework == "flask":
+            from engine.frameworks.flask.filter import FlaskFilter
+            return FlaskFilter(project_hash, project_path, parse_cache, import_graph)
 
         # Default to FastAPI
         return FastAPIFilter(project_hash, project_path, parse_cache, import_graph)
@@ -73,6 +79,11 @@ class FrameworkFactory:
             return DjangoDomainMapper(
                 core_graph, filter_instance, project_hash, call_graph_result, binder, query_engine
             )
+        elif framework == "flask":
+            from engine.frameworks.flask.mapper import FlaskDomainMapper
+            return FlaskDomainMapper(
+                core_graph, filter_instance, project_hash, call_graph_result, binder, query_engine
+            )
 
         # Default to FastAPI
         return FastAPIDomainMapper(core_graph, filter_instance, project_hash, call_graph_result, binder, query_engine)
@@ -88,6 +99,9 @@ class FrameworkFactory:
         if framework == "django":
             # TODO: Implement DjangoDependencyResolver when Django support is added
             pass
+        elif framework == "flask":
+            from engine.frameworks.flask.dependency_resolver import FlaskDependencyResolver
+            return FlaskDependencyResolver(binder, query_engine, project_hash)
 
         # Default to FastAPI
         from engine.frameworks.fastapi.dependency_resolver import FastAPIDependencyResolver
