@@ -1,13 +1,11 @@
-"""Bundle writer - creates bundle files and zip archive."""
-
+import hashlib
 import json
 import zipfile
-import hashlib
 from pathlib import Path
 
-from .schema import Bundle, Manifest
-from ..models import ServiceGraph, CodebaseStats, AnalysisResult
-from ..graph.file_tree import build_file_tree
+from engine.bundle.schema import Bundle, Manifest
+from engine.graph.file_tree import build_file_tree
+from engine.models import AnalysisResult, CodebaseStats, ServiceGraph
 
 
 def write_bundle(result: AnalysisResult, output_dir: Path, tool_version: str = "1.0.0") -> Path:
@@ -50,7 +48,7 @@ def write_bundle(result: AnalysisResult, output_dir: Path, tool_version: str = "
         json.dump(stats.model_dump(mode="json"), f, indent=2)
 
     with open(file_tree_path, "w", encoding="utf-8") as f:
-        json.dump(file_tree, f, indent=2)
+        json.dump(file_tree, f, separators=(",", ":"))
 
     bundle_hash = hashlib.sha256(f"{project_metadata.project_hash}{project_metadata.commit_sha}".encode()).hexdigest()[
         :12
