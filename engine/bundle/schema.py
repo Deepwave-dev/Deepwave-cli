@@ -1,7 +1,7 @@
 """Bundle schema - contract between CLI and backend."""
 
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from ..models import ServiceGraph, CodebaseStats
 
@@ -23,3 +23,4 @@ class Bundle(BaseModel):
     graph: ServiceGraph
     chunks: List[Dict[str, Any]] = Field(default_factory=list)
     stats: CodebaseStats
+    file_tree: Optional[Dict[str, Any]] = Field(default=None, description="File tree structure optimized for LLM consumption")

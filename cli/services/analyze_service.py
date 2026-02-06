@@ -54,6 +54,7 @@ def create_bundle(result: AnalysisResult, output_dir: Path, tool_version: Option
             output_dir / "graph.json",
             output_dir / "chunks.jsonl",
             output_dir / "stats.json",
+            output_dir / "file_tree.json",
         ]
 
         for json_file in intermediate_files:
